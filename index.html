@@ -1,3 +1,4 @@
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CoreV | OxeFit Portal</title>
@@ -140,7 +141,7 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="docs">‣ Documents</div>
     <div class="nav" data-v="eos">‣ End of Service</div>
     <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v1.6<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v1.7<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -165,8 +166,10 @@ const ONEDRIVE_CONFIG = {
   clientId   : 'cd1b7f5f-5ff9-4066-ab4f-06f270a94fcb',          // CoreV Azure app (same tenant). Add this site's URL as a redirect URI.
   authority  : 'https://login.microsoftonline.com/core-velocity.com',
   redirectUri: window.location.origin + window.location.pathname,
-  filePath   : '/CoreV-HR/corev-hr.json',                       // JSON DB inside the SHARED drive
-  sharedDriveUser: 'demo@core-velocity.com',                    // single source of truth for the whole team
+  sharedDriveUser : 'demo@core-velocity.com',                   // service account that owns the shared data
+  sharedFolder    : 'OXEFIT',                                   // a folder in demo@'s OneDrive that is SHARED WITH THE TEAM (Sales Tracker already uses it). Share it with EDIT rights.
+  fileName        : 'corev-hr.json',
+  personalFallback: true,                                       // if the shared folder isn't writable, save to the signed-in user's OWN OneDrive so they're never blocked
   scopes     : ['Files.ReadWrite.All','User.Read','Mail.Send']
 };
 /* email -> role.  admin = full access + Settings ; full = full data, no Settings ; everyone else = own record only */
@@ -644,7 +647,10 @@ function delDoc(id){if(!confirm("Remove this document reference? (The file itsel
 async function graphUploadFile(empId,type,file){
   const tok=await getAccessToken();
   const fn=encodeURIComponent((type+"-"+file.name).replace(/[^\w.\- ]/g,"_"));
-  const url=`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(ONEDRIVE_CONFIG.sharedDriveUser)}/drive/root:/CoreV-HR/Documents/${encodeURIComponent(empId)}/${fn}:/content`;
+  const st=_store||await resolveStore(tok);
+  let url;
+  if(st&&st.kind==="folder") url=`https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(st.driveId)}/items/${encodeURIComponent(st.folderItemId)}:/Documents/${encodeURIComponent(empId)}/${fn}:/content`;
+  else url=`https://graph.microsoft.com/v1.0/me/drive/root:/CoreV-HR/Documents/${encodeURIComponent(empId)}/${fn}:/content`;
   const res=await fetch(url,{method:"PUT",headers:{Authorization:"Bearer "+tok,"Content-Type":file.type||"application/octet-stream"},body:file});
   if(!res.ok)throw new Error("HTTP "+res.status);
   return await res.json();
@@ -719,8 +725,7 @@ function renderCurrent(){ if(document.querySelector('#scrim.show'))return; const
   if(ae&&(ae.tagName==="INPUT"||ae.tagName==="SELECT"||ae.tagName==="TEXTAREA"))return; setView(cur); }
 
 /* ============ Microsoft auth + OneDrive shared sync ============ */
-let msalInstance=null,msalAccount=null,syncTimer=null,_uploadInFlight=false,_uploadQueued=false,_sharedFileRef=null,_pollStarted=false;
-const _sharedFileName=(ONEDRIVE_CONFIG.filePath.split('/').pop()||'corev-hr.json').toLowerCase();
+let msalInstance=null,msalAccount=null,syncTimer=null,_uploadInFlight=false,_uploadQueued=false,_store=null,_pollStarted=false,_pfNoted=false;
 
 function setSync(status,text){const c=$("#syncChip");if(!c)return;c.className="sync-chip "+status;c.title=text||status;
   c.textContent=status==="connected"?"\u25cf":status==="syncing"?"\u25d0":status==="error"?"\u26a0":"\u25cb";}
@@ -769,42 +774,49 @@ async function getAccessToken(){
   try{const r=await msalInstance.acquireTokenSilent(req);return r.accessToken;}
   catch(e){await msalInstance.acquireTokenRedirect(req);throw e;}
 }
-function sharedItemContentUrl(ref){return `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(ref.driveId)}/items/${encodeURIComponent(ref.itemId)}/content`;}
-function driveRootUrl(){return `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(ONEDRIVE_CONFIG.sharedDriveUser)}/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;}
-async function resolveSharedFileRef(tok,force){
-  if(_sharedFileRef&&!force)return _sharedFileRef;
+function fileContentUrl(st){
+  if(st.kind==="file") return `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(st.driveId)}/items/${encodeURIComponent(st.itemId)}/content`;
+  if(st.kind==="folder") return `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(st.driveId)}/items/${encodeURIComponent(st.folderItemId)}:/${encodeURIComponent(ONEDRIVE_CONFIG.fileName)}:/content`;
+  return `https://graph.microsoft.com/v1.0/me/drive/root:/CoreV-HR/${encodeURIComponent(ONEDRIVE_CONFIG.fileName)}:/content`;
+}
+async function resolveStore(tok,force){
+  if(_store&&!force)return _store;
+  const fname=(ONEDRIVE_CONFIG.fileName||"").toLowerCase();
+  const fold=(ONEDRIVE_CONFIG.sharedFolder||"").toLowerCase();
   try{
     const res=await fetch("https://graph.microsoft.com/v1.0/me/drive/sharedWithMe",{headers:{Authorization:"Bearer "+tok}});
-    if(!res.ok)return null;
-    const body=await res.json();const items=(body&&Array.isArray(body.value))?body.value:[];
-    for(const it of items){
-      const ri=it.remoteItem||it;const name=(it.name||ri.name||"").toLowerCase();
-      const driveId=ri.parentReference&&ri.parentReference.driveId;const itemId=ri.id;
-      if(!driveId||!itemId)continue;
-      if(name===_sharedFileName){_sharedFileRef={driveId,itemId};return _sharedFileRef;}
-      if(ri.folder){try{const ch=await fetch(`https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(itemId)}/children`,{headers:{Authorization:"Bearer "+tok}});
-        if(ch.ok){const kids=await ch.json();const hit=(kids.value||[]).find(k=>(k.name||"").toLowerCase()===_sharedFileName);if(hit){_sharedFileRef={driveId,itemId:hit.id};return _sharedFileRef;}}}catch(_){}}
+    if(res.ok){
+      const body=await res.json();const items=(body&&Array.isArray(body.value))?body.value:[];
+      for(const it of items){const ri=it.remoteItem||it;const nm=(it.name||ri.name||"").toLowerCase();const d=ri.parentReference&&ri.parentReference.driveId;const id=ri.id;
+        if(d&&id&&!ri.folder&&nm===fname){_store={kind:"file",driveId:d,itemId:id};return _store;}}
+      for(const it of items){const ri=it.remoteItem||it;const nm=(it.name||ri.name||"").toLowerCase();const d=ri.parentReference&&ri.parentReference.driveId;const id=ri.id;
+        if(d&&id&&ri.folder&&(nm===fold||!fold)){_store={kind:"folder",driveId:d,folderItemId:id};return _store;}}
     }
   }catch(_){}
   return null;
 }
 function buildEnvelope(){const o={_envelope:"corevhr-v1",_meta:{updatedBy:currentUser,updatedAt:new Date().toISOString()}};KEYS.forEach(k=>o[k]=S[k]);return o;}
 function applyEnvelope(env){if(!env||typeof env!=="object")return;KEYS.forEach(k=>{if(env[k]!=null)S[k]=env[k];});}
+function failWrite(code){setSync("error","Can't save");flash("Can't save to OneDrive (error "+code+"). Ask IT to share the \u201c"+ONEDRIVE_CONFIG.sharedFolder+"\u201d folder in "+ONEDRIVE_CONFIG.sharedDriveUser+"'s OneDrive with "+(currentEmail||"your account")+" \u2014 with EDIT rights.");}
+function notePersonalFallback(){if(_pfNoted)return;_pfNoted=true;flash("Saved to your own OneDrive (shared folder unavailable). For the whole team to share one copy, share the \u201c"+ONEDRIVE_CONFIG.sharedFolder+"\u201d folder with edit rights.");}
 async function fetchRemote(tok){
-  const ref=await resolveSharedFileRef(tok);
-  if(ref){
-    let res=await fetch(sharedItemContentUrl(ref),{headers:{Authorization:"Bearer "+tok}});
-    if(res.status===404){const f=await resolveSharedFileRef(tok,true);if(f)res=await fetch(sharedItemContentUrl(f),{headers:{Authorization:"Bearer "+tok}});}
-    if(res.status===404)return{status:404};
+  let st=await resolveStore(tok);
+  if(st){
+    let res=await fetch(fileContentUrl(st),{headers:{Authorization:"Bearer "+tok}});
+    if(res.status===404)return{status:404,st};
     if(res.status===403){const e=new Error("403");e.code=403;throw e;}
     if(!res.ok)throw new Error("HTTP "+res.status);
-    return{status:200,env:await res.json()};
+    return{status:200,st,env:await res.json()};
   }
-  const res=await fetch(driveRootUrl(),{headers:{Authorization:"Bearer "+tok}});
-  if(res.status===404)return{status:404};
-  if(res.status===403){const e=new Error("403");e.code=403;throw e;}
-  if(!res.ok)throw new Error("HTTP "+res.status);
-  return{status:200,env:await res.json()};
+  if(ONEDRIVE_CONFIG.personalFallback){
+    const my={kind:"mydrive"};
+    const res=await fetch(fileContentUrl(my),{headers:{Authorization:"Bearer "+tok}});
+    if(res.status===404)return{status:404,st:my};
+    if(res.status===403){const e=new Error("403");e.code=403;throw e;}
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    _store=my;return{status:200,st:my,env:await res.json()};
+  }
+  const e=new Error("no-store");e.code=403;throw e;
 }
 async function downloadFromOneDrive(){
   if(!msalAccount)return;
@@ -812,10 +824,10 @@ async function downloadFromOneDrive(){
     setSync("syncing","Loading\u2026");
     const tok=await getAccessToken();
     const r=await fetchRemote(tok);
-    if(r.status===404){await uploadToOneDrive();setSync("connected","Synced");return;}
+    if(r.status===404){await uploadToOneDrive();return;}
     applyEnvelope(r.env);saveLocal();setSync("connected","Synced");
   }catch(e){
-    if(e&&e.code===403){setSync("error","No shared-drive access");flash("No access to the shared demo@ drive \u2014 ask IT to share the CoreV-HR folder with you.");return;}
+    if(e&&e.code===403){failWrite(403);return;}
     setSync("error","Sync error (using local copy)");
   }
 }
@@ -826,14 +838,27 @@ async function uploadToOneDrive(){
   try{
     setSync("syncing","Saving\u2026");
     const tok=await getAccessToken();
-    const ref=_sharedFileRef||await resolveSharedFileRef(tok);
-    const url=ref?sharedItemContentUrl(ref):driveRootUrl();
-    let res=await fetch(url,{method:"PUT",headers:{Authorization:"Bearer "+tok,"Content-Type":"application/json"},body:JSON.stringify(buildEnvelope())});
-    if(res.status===403){setSync("error","No write access");flash("Can't save to the shared drive \u2014 your account lacks write access.");return;}
-    if(res.status===404&&ref){_sharedFileRef=null;res=await fetch(driveRootUrl(),{method:"PUT",headers:{Authorization:"Bearer "+tok,"Content-Type":"application/json"},body:JSON.stringify(buildEnvelope())});}
-    if(!res.ok&&res.status!==201)throw new Error("HTTP "+res.status);
-    setSync("connected","Synced");
-  }catch(e){setSync("error","Sync error");}
+    const body=JSON.stringify(buildEnvelope());
+    const put=s2=>fetch(fileContentUrl(s2),{method:"PUT",headers:{Authorization:"Bearer "+tok,"Content-Type":"application/json"},body});
+    let st=_store||await resolveStore(tok);
+    if(st){
+      let res=await put(st);
+      if((res.status===403||res.status===404)&&ONEDRIVE_CONFIG.personalFallback){
+        const my={kind:"mydrive"};const r2=await put(my);
+        if(r2.ok||r2.status===201){_store=my;setSync("connected","Saved (own drive)");notePersonalFallback();return;}
+        return failWrite(r2.status);
+      }
+      if(res.status===403)return failWrite(403);
+      if(!res.ok&&res.status!==201)throw new Error("HTTP "+res.status);
+      _store=st;setSync("connected","Synced");return;
+    }
+    if(ONEDRIVE_CONFIG.personalFallback){
+      const my={kind:"mydrive"};const r=await put(my);
+      if(r.ok||r.status===201){_store=my;setSync("connected","Saved (own drive)");notePersonalFallback();return;}
+      return failWrite(r.status);
+    }
+    return failWrite(403);
+  }catch(e){if(e&&e.code===403)return failWrite(403);setSync("error","Sync error");}
   finally{_uploadInFlight=false;if(_uploadQueued){_uploadQueued=false;scheduleSync();}}
 }
 function startPolling(){ setInterval(async()=>{
