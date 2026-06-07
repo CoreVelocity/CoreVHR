@@ -1,4 +1,3 @@
-
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CoreV | OxeFit Portal</title>
@@ -141,7 +140,7 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="docs">‣ Documents</div>
     <div class="nav" data-v="eos">‣ End of Service</div>
     <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v1.4<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v1.5<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -374,7 +373,7 @@ function empForm(id){
      <div><label>Insurance cost (AED)</label><input type="number" id="f_insCost" value="${f('insCost',0)}"></div>
      <div class="full"><label>Annual ticket</label><div class="flex"><label style="margin:0"><input type="checkbox" id="f_ticket" ${f('ticket')?'checked':''}> Eligible</label><span class="muted">Misconduct (forfeit gratuity):</span><input type="checkbox" id="f_misconduct" ${f('misconduct')?'checked':''}></div></div>
    </div>`,
-   [["Cancel","close()","g"],[id?"Save changes":"Add employee",`saveEmp('${id||''}')`,"p"]]);
+   [["Cancel","closeModal()","g"],[id?"Save changes":"Add employee",`saveEmp('${id||''}')`,"p"]]);
 }
 function saveEmp(id){
   const g=k=>$("#f_"+k);
@@ -384,7 +383,7 @@ function saveEmp(id){
   ["basic","housing","transport","other","visaCost","insCost"].forEach(k=>obj[k]=+g(k).value||0);
   obj.ticket=g("ticket").checked;obj.misconduct=g("misconduct").checked;
   if(id){const i=S.employees.findIndex(e=>e.id===id);S.employees[i]={...S.employees[i],...obj};}else S.employees.push(obj);
-  dbSet();close();setView("emp");
+  dbSet();closeModal();setView("emp");
 }
 
 /* ---------- Leave ---------- */
@@ -428,13 +427,13 @@ function leaveForm(){
      <div><label>From *</label><input type="date" id="f_start"></div>
      <div><label>To *</label><input type="date" id="f_end"></div>
    </div><div class="hint">Annual leave counts against the calendar-year balance; sick leave against the 90-day service-year entitlement; unpaid days are deducted from gratuity service.</div>`,
-   [["Cancel","close()","g"],["Log leave","saveLeave","p"]]);
+   [["Cancel","closeModal()","g"],["Log leave","saveLeave","p"]]);
 }
 function saveLeave(){
   const emp=$("#f_emp").value,type=$("#f_type").value,start=$("#f_start").value,end=$("#f_end").value,status=$("#f_status").value;
   if(!emp||!start||!end){alert("Employee, from and to dates are required.");return;}
   if(D(end)<D(start)){alert("End date is before start date.");return;}
-  S.leaves.push({id:uid(),emp,type,start,end,status});dbSet("leaves",S.leaves);close();setView("leave");
+  S.leaves.push({id:uid(),emp,type,start,end,status});dbSet("leaves",S.leaves);closeModal();setView("leave");
 }
 function toggleLeave(id){const l=S.leaves.find(x=>x.id===id);l.status=l.status==="Approved"?"Requested":"Approved";dbSet("leaves",S.leaves);setView("leave");}
 
@@ -463,14 +462,14 @@ function toilForm(kind){
      <div><label>Hours *</label><input type="number" step="0.5" id="f_hours"></div>
      <div class="full"><label>Note</label><input id="f_note" placeholder="${work?'e.g. Saturday deployment':'e.g. leaving early Wed'}"></div>
    </div>${work?`<div class="hint">Hours will be credited at ${S.settings.toilMult}× to the employee's TOIL balance.</div>`:''}`,
-   [["Cancel","close()","g"],[work?"Add weekend work":"Deduct time off",`saveToil('${kind}')`,"p"]]);
+   [["Cancel","closeModal()","g"],[work?"Add weekend work":"Deduct time off",`saveToil('${kind}')`,"p"]]);
 }
 function saveToil(kind){
   const emp=$("#f_emp").value,date=$("#f_date").value,hours=+$("#f_hours").value,note=$("#f_note").value;
   if(!emp||!date||!hours){alert("Employee, date and hours are required.");return;}
   if(kind==="work"){S.weekend.push({id:uid(),emp,date,hours,note});dbSet("weekend",S.weekend);}
   else{S.toil.push({id:uid(),emp,date,hours,note});dbSet("toil",S.toil);}
-  close();setView("toil");
+  closeModal();setView("toil");
 }
 
 /* ---------- Letters ---------- */
@@ -489,14 +488,14 @@ function letterForm(){
      <div><label>Letter type *</label><select id="f_ltype">${LT.map(t=>`<option>${t}</option>`).join("")}</select></div>
      <div><label>Addressed to</label><input id="f_addr" placeholder="To Whom It May Concern"></div>
      <div class="full"><label>Reason / purpose</label><input id="f_reason" placeholder="e.g. travelling to the UK · applying for a UAE driving licence"></div>
-   </div>`,[["Cancel","close()","g"],["Submit request","saveLetter","p"]]);
+   </div>`,[["Cancel","closeModal()","g"],["Submit request","saveLetter","p"]]);
 }
 function saveLetter(){
   const emp=$("#f_emp").value,ltype=$("#f_ltype").value;if(!emp){alert("Pick an employee.");return;}
   const n=S.letters.filter(l=>l.ltype===ltype).length+1;
   const pre={"NOC":"NOC","Salary Certificate":"SAL","Employment Letter":"EMP"}[ltype];
   const L={id:uid(),ref:`CV-${pre}-${String(n).padStart(4,'0')}`,emp,ltype,addressedTo:$("#f_addr").value,reason:$("#f_reason").value,status:"Submitted",issued:dateStr(today())};
-  S.letters.push(L);dbSet();notifyLetterRequest(L);close();updateBadges();setView("letters");
+  S.letters.push(L);dbSet();notifyLetterRequest(L);closeModal();updateBadges();setView("letters");
 }
 function advanceLetter(id){const l=S.letters.find(x=>x.id===id);const flow=["Submitted","Manager approved","HR approved","Issued"];const i=flow.indexOf(l.status);l.status=flow[Math.min(i+1,flow.length-1)];dbSet("letters",S.letters);updateBadges();setView("letters");}
 function buildLetterText(l){
@@ -510,7 +509,7 @@ function buildLetterText(l){
 function genLetter(id){
   const l=S.letters.find(x=>x.id===id);const body=buildLetterText(l);
   modal(`${l.ltype} \u2014 ${l.ref}`,`<div id="printArea" class="letter-preview">${body.replace(/</g,'&lt;')}</div>`,
-   [["Copy text","copyLetter()","g"],["Print / PDF","window.print()","g"],["Close","close()","p"]]);
+   [["Copy text","copyLetter()","g"],["Print / PDF","window.print()","g"],["Close","closeModal()","p"]]);
   window._letterText=body;
 }
 function copyLetter(){navigator.clipboard&&navigator.clipboard.writeText(window._letterText||"");const b=event.target;b.textContent="Copied ✓";setTimeout(()=>b.textContent="Copy text",1200);}
@@ -530,11 +529,11 @@ function assetForm(){
      <div><label>Serial / identifier</label><input id="f_serial"></div>
      <div><label>Assign to *</label><select id="f_emp">${S.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("")}</select></div>
      <div><label>Date issued</label><input type="date" id="f_issued" value="${dateStr(today())}"></div>
-   </div>`,[["Cancel","close()","g"],["Assign","saveAsset","p"]]);
+   </div>`,[["Cancel","closeModal()","g"],["Assign","saveAsset","p"]]);
 }
 function saveAsset(){const emp=$("#f_emp").value;if(!emp){alert("Pick an employee.");return;}
   S.assets.push({id:uid(),type:$("#f_type").value,tag:$("#f_tag").value,serial:$("#f_serial").value,emp,issued:$("#f_issued").value,status:"Assigned"});
-  dbSet("assets",S.assets);close();setView("assets");}
+  dbSet("assets",S.assets);closeModal();setView("assets");}
 function toggleAsset(id){const a=S.assets.find(x=>x.id===id);a.status=a.status==="Assigned"?"Returned":"Assigned";if(a.status==="Returned")a.returned=dateStr(today());dbSet("assets",S.assets);setView("assets");}
 
 /* ---------- End of service ---------- */
@@ -680,8 +679,8 @@ function modal(title,bodyHTML,buttons=[]){
   $("#modal").innerHTML=`<h3>${title}</h3><div class="body">${bodyHTML}</div>`+(buttons.length?`<div class="foot">${buttons.map(b=>`<button class="btn ${b[2]}" onclick="${b[1]}">${b[0]}</button>`).join("")}</div>`:"");
   $("#scrim").classList.add("show");
 }
-function close(){$("#scrim").classList.remove("show");}
-$("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim")close();});
+function closeModal(){$("#scrim").classList.remove("show");}
+$("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeModal();});
 
 /* ---------- roles / identity UI ---------- */
 function updateWho(){const w=$("#whoami");if(w)w.textContent=currentUser?(currentUser+" · "+(role==="admin"?"Admin":role==="full"?"Full access":"Employee")):"";}
