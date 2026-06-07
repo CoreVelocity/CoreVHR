@@ -140,7 +140,7 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="docs">‣ Documents</div>
     <div class="nav" data-v="eos">‣ End of Service</div>
     <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v1.5<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v1.6<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -427,7 +427,7 @@ function leaveForm(){
      <div><label>From *</label><input type="date" id="f_start"></div>
      <div><label>To *</label><input type="date" id="f_end"></div>
    </div><div class="hint">Annual leave counts against the calendar-year balance; sick leave against the 90-day service-year entitlement; unpaid days are deducted from gratuity service.</div>`,
-   [["Cancel","closeModal()","g"],["Log leave","saveLeave","p"]]);
+   [["Cancel","closeModal()","g"],["Log leave","saveLeave()","p"]]);
 }
 function saveLeave(){
   const emp=$("#f_emp").value,type=$("#f_type").value,start=$("#f_start").value,end=$("#f_end").value,status=$("#f_status").value;
@@ -488,7 +488,7 @@ function letterForm(){
      <div><label>Letter type *</label><select id="f_ltype">${LT.map(t=>`<option>${t}</option>`).join("")}</select></div>
      <div><label>Addressed to</label><input id="f_addr" placeholder="To Whom It May Concern"></div>
      <div class="full"><label>Reason / purpose</label><input id="f_reason" placeholder="e.g. travelling to the UK · applying for a UAE driving licence"></div>
-   </div>`,[["Cancel","closeModal()","g"],["Submit request","saveLetter","p"]]);
+   </div>`,[["Cancel","closeModal()","g"],["Submit request","saveLetter()","p"]]);
 }
 function saveLetter(){
   const emp=$("#f_emp").value,ltype=$("#f_ltype").value;if(!emp){alert("Pick an employee.");return;}
@@ -529,7 +529,7 @@ function assetForm(){
      <div><label>Serial / identifier</label><input id="f_serial"></div>
      <div><label>Assign to *</label><select id="f_emp">${S.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("")}</select></div>
      <div><label>Date issued</label><input type="date" id="f_issued" value="${dateStr(today())}"></div>
-   </div>`,[["Cancel","closeModal()","g"],["Assign","saveAsset","p"]]);
+   </div>`,[["Cancel","closeModal()","g"],["Assign","saveAsset()","p"]]);
 }
 function saveAsset(){const emp=$("#f_emp").value;if(!emp){alert("Pick an employee.");return;}
   S.assets.push({id:uid(),type:$("#f_type").value,tag:$("#f_tag").value,serial:$("#f_serial").value,emp,issued:$("#f_issued").value,status:"Assigned"});
