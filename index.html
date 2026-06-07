@@ -1,3 +1,4 @@
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CoreV | OxeFit Portal</title>
@@ -99,7 +100,7 @@ tbody tr:hover{background:#FCFBF7}
 <style>
 #loginScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--teal-d);background-image:radial-gradient(circle at 20% 15%,rgba(255,255,255,.07),transparent 42%),radial-gradient(circle at 82% 85%,rgba(255,255,255,.05),transparent 42%);z-index:200;padding:20px}
 .login-card{background:#fff;border-radius:20px;padding:44px 46px;width:100%;max-width:420px;box-shadow:0 30px 80px -20px rgba(0,0,0,.5);text-align:center}
-.login-logo{max-height:64px;max-width:230px;margin:0 auto 18px;display:block}
+.login-logo{max-height:72px;max-width:240px;width:auto;height:auto;object-fit:contain;margin:0 auto 18px;display:block}
 .login-title{font-family:"Fraunces",serif;font-size:30px;font-weight:600;letter-spacing:-.5px}
 .login-sub{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--ink-soft);margin-top:4px;margin-bottom:30px}
 .ms-btn{display:inline-flex;align-items:center;gap:11px;background:#fff;border:1px solid #8C8C8C;border-radius:8px;padding:12px 20px;font-family:inherit;font-size:14px;font-weight:600;color:#3b3b3b;cursor:pointer;width:100%;justify-content:center;transition:.15s}
@@ -109,7 +110,7 @@ tbody tr:hover{background:#FCFBF7}
 .login-setup{font-size:11.5px;color:var(--ink-soft);margin-top:16px;text-align:left;background:#FBFAF6;border:1px solid var(--line);border-radius:8px;padding:12px;line-height:1.6;display:none}
 .sync-chip{display:inline-flex;align-items:center;font-size:15px;cursor:pointer;line-height:1}
 .sync-chip.connected{color:var(--green)}.sync-chip.syncing{color:var(--amber)}.sync-chip.offline{color:var(--ink-soft)}.sync-chip.error{color:var(--red)}
-#brandLogo{max-height:34px;max-width:150px;margin:0 8px 12px;display:none}
+#brandLogo{max-height:36px;max-width:160px;width:auto;height:auto;object-fit:contain;margin:0 8px 12px;display:none}
 .app{display:none}.app.ready{display:grid}
 </style>
 <div id="loginScreen">
@@ -122,6 +123,7 @@ tbody tr:hover{background:#FCFBF7}
       <span>Sign in with Microsoft</span>
     </button>
     <div class="login-hint">Use your <b>@core-velocity.com</b> work account</div>
+    <div class="login-hint" style="margin-top:8px"><a href="#" onclick="enterDemo();return false;" style="color:var(--ink-soft)">Preview without signing in</a></div>
     <div class="login-error" id="loginError"></div>
     <div class="login-setup" id="loginSetup"></div>
   </div>
@@ -135,9 +137,11 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="toil">‣ Weekend / TOIL</div>
     <div class="nav" data-v="letters">‣ Letters <small id="navLetters" style="display:none"></small></div>
     <div class="nav" data-v="assets">‣ Assets</div>
+    <div class="nav" data-v="salary">‣ Monthly Salaries</div>
+    <div class="nav" data-v="docs">‣ Documents</div>
     <div class="nav" data-v="eos">‣ End of Service</div>
     <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">Mainland · MOHRE rules<br>Annual leave resets 1 Jan<br>Sick leave on work anniversary</div>
+    <div class="side-foot">CoreV | OxeFit · v1.3<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -157,14 +161,14 @@ tbody tr:hover{background:#FCFBF7}
 
 <script>
 /* ============ config: Microsoft SSO + OneDrive shared sync ============ */
-const KEYS=["employees","leaves","weekend","toil","letters","assets","settings"];
+const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","settings"];
 const ONEDRIVE_CONFIG = {
   clientId   : 'cd1b7f5f-5ff9-4066-ab4f-06f270a94fcb',          // CoreV Azure app (same tenant). Add this site's URL as a redirect URI.
   authority  : 'https://login.microsoftonline.com/core-velocity.com',
   redirectUri: window.location.origin + window.location.pathname,
   filePath   : '/CoreV-HR/corev-hr.json',                       // JSON DB inside the SHARED drive
   sharedDriveUser: 'demo@core-velocity.com',                    // single source of truth for the whole team
-  scopes     : ['Files.ReadWrite.All','User.Read']
+  scopes     : ['Files.ReadWrite.All','User.Read','Mail.Send']
 };
 /* email -> role.  admin = full access + Settings ; full = full data, no Settings ; everyone else = own record only */
 const ROLE_MAP = {
@@ -175,7 +179,7 @@ const ROLE_MAP = {
 };
 function roleForEmail(e){return ROLE_MAP[(e||'').toLowerCase().trim()]||'employee';}
 
-let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],
+let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],
   settings:{companyName:"CoreV | OxeFit",tradeLicense:"",address:"Dubai, United Arab Emirates",phone:"",
     signatory:"",signatoryTitle:"HR Manager",carryCap:30,dailyHours:8,toilMult:3,logo:""}};
 let role="employee", currentUser="", currentEmail="";
@@ -186,7 +190,8 @@ const hasLS=(()=>{try{localStorage.setItem("__t","1");localStorage.removeItem("_
 function loadLocal(){ if(!hasLS)return; try{const o=JSON.parse(localStorage.getItem(LSKEY)||"null"); if(o)KEYS.forEach(k=>{if(o[k]!=null)S[k]=o[k];});}catch(e){} }
 function saveLocal(){ if(!hasLS)return; try{const o={};KEYS.forEach(k=>o[k]=S[k]);localStorage.setItem(LSKEY,JSON.stringify(o));}catch(e){} }
 /* dbSet(): state already mutated in S; cache locally + schedule a cloud sync. (args ignored) */
-function dbSet(){ saveLocal(); scheduleSync(); }
+let DEMO=false;
+function dbSet(){ if(DEMO)return; saveLocal(); scheduleSync(); }
 
 /* ============ helpers ============ */
 const uid=()=>Math.random().toString(36).slice(2,9);
@@ -253,7 +258,7 @@ const view=$("#view");
 const titles={dash:["Dashboard","Live view of the team"],emp:["Employees","Master records, compensation & compliance"],
   leave:["Leave","Annual & sick leave balances"],toil:["Weekend / TOIL","Weekend work logged at "+0+"× — time off in lieu"],
   letters:["Letters","NOC, salary certificate & employment letters"],assets:["Assets","Company deliverables per employee"],
-  eos:["End of Service","Gratuity & final settlement (MOHRE)"],settings:["Settings","Company details & policy"]};
+  eos:["End of Service","Gratuity & final settlement (MOHRE)"],salary:["Monthly Salaries","Payroll & cost per employee"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"]};
 let cur="dash";
 
 function isHR(){return role==="admin"||role==="full";}
@@ -263,7 +268,7 @@ function visibleEmps(){return isHR()?S.employees:S.employees.filter(e=>e.id===se
 
 function setView(v){cur=v;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("on",n.dataset.v===v));
   $("#vTitle").textContent=titles[v][0]; $("#vSub").textContent= v==="toil"? "Weekend work logged at "+S.settings.toilMult+"× — time off in lieu" : titles[v][1];
-  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,settings:rSettings})[v]();}
+  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,salary:rSalary,docs:rDocs,settings:rSettings})[v]();}
 
 function statusBadge(e){const m={Active:"b-green",Probation:"b-amber",Notice:"b-amber",Exited:"b-grey"};return `<span class="badge ${m[e.status]||'b-grey'}"><span class="dot" style="background:currentColor"></span>${e.status}</span>`;}
 function expBadge(days){if(days<0)return`<span class="badge b-red">Expired ${-days}d</span>`;if(days<=30)return`<span class="badge b-red">${days}d left</span>`;if(days<=60)return`<span class="badge b-amber">${days}d left</span>`;return`<span class="badge b-green">${days}d</span>`;}
@@ -364,16 +369,18 @@ function empForm(id){
      <div><label>Emirates ID expiry</label><input type="date" id="f_eidExpiry" value="${f('eidExpiry')}"></div>
      <div><label>Passport expiry</label><input type="date" id="f_passportExpiry" value="${f('passportExpiry')}"></div>
      <div><label>Insurance expiry</label><input type="date" id="f_insExpiry" value="${f('insExpiry')}"></div>
+     <div><label>Visa / onboarding cost (AED)</label><input type="number" id="f_visaCost" value="${f('visaCost',0)}"></div>
+     <div><label>Insurance cost (AED)</label><input type="number" id="f_insCost" value="${f('insCost',0)}"></div>
      <div class="full"><label>Annual ticket</label><div class="flex"><label style="margin:0"><input type="checkbox" id="f_ticket" ${f('ticket')?'checked':''}> Eligible</label><span class="muted">Misconduct (forfeit gratuity):</span><input type="checkbox" id="f_misconduct" ${f('misconduct')?'checked':''}></div></div>
    </div>`,
-   [["Cancel","close","g"],[id?"Save changes":"Add employee",`saveEmp('${id||''}')`,"p"]]);
+   [["Cancel","close()","g"],[id?"Save changes":"Add employee",`saveEmp('${id||''}')`,"p"]]);
 }
 function saveEmp(id){
   const g=k=>$("#f_"+k);
   if(!g("name").value||!g("start").value){alert("Name and start date are required.");return;}
   const obj={id:id||uid()};
   ["name","empId","designation","department","status","nationality","email","start","probationEnd","endDate","visaType","passportNo","visaExpiry","eidExpiry","passportExpiry","insExpiry"].forEach(k=>obj[k]=g(k).value);
-  ["basic","housing","transport","other"].forEach(k=>obj[k]=+g(k).value||0);
+  ["basic","housing","transport","other","visaCost","insCost"].forEach(k=>obj[k]=+g(k).value||0);
   obj.ticket=g("ticket").checked;obj.misconduct=g("misconduct").checked;
   if(id){const i=S.employees.findIndex(e=>e.id===id);S.employees[i]={...S.employees[i],...obj};}else S.employees.push(obj);
   dbSet();close();setView("emp");
@@ -420,7 +427,7 @@ function leaveForm(){
      <div><label>From *</label><input type="date" id="f_start"></div>
      <div><label>To *</label><input type="date" id="f_end"></div>
    </div><div class="hint">Annual leave counts against the calendar-year balance; sick leave against the 90-day service-year entitlement; unpaid days are deducted from gratuity service.</div>`,
-   [["Cancel","close","g"],["Log leave","saveLeave","p"]]);
+   [["Cancel","close()","g"],["Log leave","saveLeave","p"]]);
 }
 function saveLeave(){
   const emp=$("#f_emp").value,type=$("#f_type").value,start=$("#f_start").value,end=$("#f_end").value,status=$("#f_status").value;
@@ -455,7 +462,7 @@ function toilForm(kind){
      <div><label>Hours *</label><input type="number" step="0.5" id="f_hours"></div>
      <div class="full"><label>Note</label><input id="f_note" placeholder="${work?'e.g. Saturday deployment':'e.g. leaving early Wed'}"></div>
    </div>${work?`<div class="hint">Hours will be credited at ${S.settings.toilMult}× to the employee's TOIL balance.</div>`:''}`,
-   [["Cancel","close","g"],[work?"Add weekend work":"Deduct time off",`saveToil('${kind}')`,"p"]]);
+   [["Cancel","close()","g"],[work?"Add weekend work":"Deduct time off",`saveToil('${kind}')`,"p"]]);
 }
 function saveToil(kind){
   const emp=$("#f_emp").value,date=$("#f_date").value,hours=+$("#f_hours").value,note=$("#f_note").value;
@@ -481,26 +488,28 @@ function letterForm(){
      <div><label>Letter type *</label><select id="f_ltype">${LT.map(t=>`<option>${t}</option>`).join("")}</select></div>
      <div><label>Addressed to</label><input id="f_addr" placeholder="To Whom It May Concern"></div>
      <div class="full"><label>Reason / purpose</label><input id="f_reason" placeholder="e.g. travelling to the UK · applying for a UAE driving licence"></div>
-   </div>`,[["Cancel","close","g"],["Submit request","saveLetter","p"]]);
+   </div>`,[["Cancel","close()","g"],["Submit request","saveLetter","p"]]);
 }
 function saveLetter(){
   const emp=$("#f_emp").value,ltype=$("#f_ltype").value;if(!emp){alert("Pick an employee.");return;}
   const n=S.letters.filter(l=>l.ltype===ltype).length+1;
   const pre={"NOC":"NOC","Salary Certificate":"SAL","Employment Letter":"EMP"}[ltype];
-  S.letters.push({id:uid(),ref:`CV-${pre}-${String(n).padStart(4,'0')}`,emp,ltype,addressedTo:$("#f_addr").value,reason:$("#f_reason").value,status:"Submitted",issued:dateStr(today())});
-  dbSet("letters",S.letters);close();updateBadges();setView("letters");
+  const L={id:uid(),ref:`CV-${pre}-${String(n).padStart(4,'0')}`,emp,ltype,addressedTo:$("#f_addr").value,reason:$("#f_reason").value,status:"Submitted",issued:dateStr(today())};
+  S.letters.push(L);dbSet();notifyLetterRequest(L);close();updateBadges();setView("letters");
 }
 function advanceLetter(id){const l=S.letters.find(x=>x.id===id);const flow=["Submitted","Manager approved","HR approved","Issued"];const i=flow.indexOf(l.status);l.status=flow[Math.min(i+1,flow.length-1)];dbSet("letters",S.letters);updateBadges();setView("letters");}
-function genLetter(id){
-  const l=S.letters.find(x=>x.id===id);const e=S.employees.find(x=>x.id===l.emp);const c=S.settings;
-  const sign=`\n\nFor ${c.companyName}\n\n\n_______________________\n${c.signatory||'[Authorised signatory]'}\n${c.signatoryTitle}\nTrade License No: ${c.tradeLicense||'[—]'}\n${c.address}${c.phone?' | '+c.phone:''}`;
+function buildLetterText(l){
+  const e=S.employees.find(x=>x.id===l.emp)||{};const c=S.settings;
+  const sign=`\n\nFor ${c.companyName}\n\n\n_______________________\n${c.signatory||'[Authorised signatory]'}\n${c.signatoryTitle}\nTrade License No: ${c.tradeLicense||'[\u2014]'}\n${c.address}${c.phone?' | '+c.phone:''}`;
   const head=`Ref: ${l.ref}\nDate: ${prettyD(l.issued)}\n`;
-  let body="";
-  if(l.ltype==="NOC"){body=`${head}\nTO WHOM IT MAY CONCERN\n\nSubject: No Objection Certificate\n\nThis is to certify that ${e.name}, holder of passport number ${e.passportNo||'[—]'} and a ${e.nationality||'[—]'} national, is employed with ${c.companyName} as ${e.designation||'[—]'} since ${prettyD(e.start)}.\n\n${c.companyName} has no objection to ${e.name} ${l.reason||'[reason]'}.\n\nThis certificate is issued upon the employee's request and does not relieve ${e.name} of any obligations toward the company.`+sign;}
-  else if(l.ltype==="Salary Certificate"){body=`${head}\n${l.addressedTo||'TO WHOM IT MAY CONCERN'}\n\nSALARY CERTIFICATE\n\nThis is to certify that ${e.name} (${e.nationality||'[—]'}, passport no. ${e.passportNo||'[—]'}) has been employed with ${c.companyName} as ${e.designation||'[—]'} in the ${e.department||'[—]'} department since ${prettyD(e.start)}.\n\nThe employee's current monthly remuneration is as follows:\n\n  Basic Salary .......... AED ${fmt(e.basic)}\n  Housing Allowance ..... AED ${fmt(e.housing)}\n  Transport Allowance ... AED ${fmt(e.transport)}\n  Other Allowance ....... AED ${fmt(e.other)}\n  ------------------------------------\n  Total Monthly Salary .. AED ${fmt(totalSalary(e))}\n\nThis certificate is issued upon the employee's request without any liability on the part of ${c.companyName}.`+sign;}
-  else{body=`${head}\n${l.addressedTo||'TO WHOM IT MAY CONCERN'}\n\nEMPLOYMENT VERIFICATION LETTER\n\nThis is to confirm that ${e.name}, holder of passport number ${e.passportNo||'[—]'} (${e.nationality||'[—]'}), is a current full-time employee of ${c.companyName}, holding the position of ${e.designation||'[—]'} in the ${e.department||'[—]'} department.\n\n${e.name} has been employed with us since ${prettyD(e.start)} and remains in active service as of the date of this letter, sponsored under a ${e.visaType||'[—]'} visa.\n\nThis letter is issued at the employee's request and may be presented to the relevant authority as proof of employment.`+sign;}
-  modal(`${l.ltype} — ${l.ref}`,`<div id="printArea" class="letter-preview">${body.replace(/</g,'&lt;')}</div>`,
-   [["Copy text",`copyLetter()`,"g"],["Print / PDF","window.print()","g"],["Close","close","p"]]);
+  if(l.ltype==="NOC")return `${head}\nTO WHOM IT MAY CONCERN\n\nSubject: No Objection Certificate\n\nThis is to certify that ${e.name}, holder of passport number ${e.passportNo||'[\u2014]'} and a ${e.nationality||'[\u2014]'} national, is employed with ${c.companyName} as ${e.designation||'[\u2014]'} since ${prettyD(e.start)}.\n\n${c.companyName} has no objection to ${e.name} ${l.reason||'[reason]'}.\n\nThis certificate is issued upon the employee's request and does not relieve ${e.name} of any obligations toward the company.`+sign;
+  if(l.ltype==="Salary Certificate")return `${head}\n${l.addressedTo||'TO WHOM IT MAY CONCERN'}\n\nSALARY CERTIFICATE\n\nThis is to certify that ${e.name} (${e.nationality||'[\u2014]'}, passport no. ${e.passportNo||'[\u2014]'}) has been employed with ${c.companyName} as ${e.designation||'[\u2014]'} in the ${e.department||'[\u2014]'} department since ${prettyD(e.start)}.\n\nThe employee's current monthly remuneration is as follows:\n\n  Basic Salary .......... AED ${fmt(e.basic)}\n  Housing Allowance ..... AED ${fmt(e.housing)}\n  Transport Allowance ... AED ${fmt(e.transport)}\n  Other Allowance ....... AED ${fmt(e.other)}\n  ------------------------------------\n  Total Monthly Salary .. AED ${fmt(totalSalary(e))}\n\nThis certificate is issued upon the employee's request without any liability on the part of ${c.companyName}.`+sign;
+  return `${head}\n${l.addressedTo||'TO WHOM IT MAY CONCERN'}\n\nEMPLOYMENT VERIFICATION LETTER\n\nThis is to confirm that ${e.name}, holder of passport number ${e.passportNo||'[\u2014]'} (${e.nationality||'[\u2014]'}), is a current full-time employee of ${c.companyName}, holding the position of ${e.designation||'[\u2014]'} in the ${e.department||'[\u2014]'} department.\n\n${e.name} has been employed with us since ${prettyD(e.start)} and remains in active service as of the date of this letter, sponsored under a ${e.visaType||'[\u2014]'} visa.\n\nThis letter is issued at the employee's request and may be presented to the relevant authority as proof of employment.`+sign;
+}
+function genLetter(id){
+  const l=S.letters.find(x=>x.id===id);const body=buildLetterText(l);
+  modal(`${l.ltype} \u2014 ${l.ref}`,`<div id="printArea" class="letter-preview">${body.replace(/</g,'&lt;')}</div>`,
+   [["Copy text","copyLetter()","g"],["Print / PDF","window.print()","g"],["Close","close()","p"]]);
   window._letterText=body;
 }
 function copyLetter(){navigator.clipboard&&navigator.clipboard.writeText(window._letterText||"");const b=event.target;b.textContent="Copied ✓";setTimeout(()=>b.textContent="Copy text",1200);}
@@ -520,7 +529,7 @@ function assetForm(){
      <div><label>Serial / identifier</label><input id="f_serial"></div>
      <div><label>Assign to *</label><select id="f_emp">${S.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("")}</select></div>
      <div><label>Date issued</label><input type="date" id="f_issued" value="${dateStr(today())}"></div>
-   </div>`,[["Cancel","close","g"],["Assign","saveAsset","p"]]);
+   </div>`,[["Cancel","close()","g"],["Assign","saveAsset","p"]]);
 }
 function saveAsset(){const emp=$("#f_emp").value;if(!emp){alert("Pick an employee.");return;}
   S.assets.push({id:uid(),type:$("#f_type").value,tag:$("#f_tag").value,serial:$("#f_serial").value,emp,issued:$("#f_issued").value,status:"Assigned"});
@@ -549,7 +558,7 @@ function rSettings(){
   const c=S.settings;
   view.innerHTML=`<div class="sec-h"><h2>Branding</h2></div>
    <div class="card" style="max-width:640px"><div class="flex" style="gap:18px;align-items:flex-start">
-     <img id="logoPreview" src="${c.logo||''}" alt="" style="height:56px;max-width:170px;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff;${c.logo?'':'display:none'}">
+     <img id="logoPreview" src="${c.logo||''}" alt="" style="max-height:56px;max-width:170px;width:auto;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff;${c.logo?'':'display:none'}">
      <div style="flex:1"><label>Company logo</label><input type="file" id="logoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp" onchange="onLogoPick(event)">
      <div class="hint">PNG/JPG/SVG up to ~400&nbsp;KB. Appears on the sign-in screen and sidebar, and syncs to everyone.</div>
      ${c.logo?`<button class="btn g sm" style="margin-top:10px" onclick="clearLogo()">Remove logo</button>`:''}</div>
@@ -575,11 +584,95 @@ function rSettings(){
 function saveSettings(){["companyName","tradeLicense","phone","address","signatory","signatoryTitle"].forEach(k=>S.settings[k]=$("#s_"+k).value);
   ["carryCap","dailyHours","toilMult"].forEach(k=>S.settings[k]=+$("#s_"+k).value||S.settings[k]);
   dbSet("settings",S.settings);setView("settings");flash("Settings saved");}
-async function wipe(){if(!confirm("Delete ALL portal data, including from the shared OneDrive file? This cannot be undone."))return;["employees","leaves","weekend","toil","letters","assets"].forEach(k=>S[k]=[]);dbSet();updateBadges();applyRoleUI();setView("dash");flash("All data cleared");}
+async function wipe(){if(!confirm("Delete ALL portal data, including from the shared OneDrive file? This cannot be undone."))return;["employees","leaves","weekend","toil","letters","assets","docs"].forEach(k=>S[k]=[]);dbSet();updateBadges();applyRoleUI();setView("dash");flash("All data cleared");}
 
 /* ---------- generic ---------- */
 function delItem(coll,id,vname){if(!confirm("Delete this entry?"))return;S[coll]=S[coll].filter(x=>x.id!==id);dbSet(coll,S[coll]);updateBadges();setView(vname==='leave'?'leave':vname==='toil'?'toil':vname);}
 function flash(msg){const d=document.createElement("div");d.textContent=msg;d.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;z-index:99;box-shadow:var(--shadow)";document.body.appendChild(d);setTimeout(()=>d.remove(),1600);}
+
+/* ---------- Monthly salaries (admin) ---------- */
+let salaryMonth="";
+function rSalary(){
+  if(!isAdmin()){view.innerHTML=`<div class="empty"><b>Restricted</b>Monthly salaries are admin-only.</div>`;return;}
+  const now=today(); if(!salaryMonth) salaryMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  const pr=salaryMonth.split("-").map(Number); const yy=pr[0],mm=pr[1];
+  const mStart=new Date(yy,mm-1,1), mEnd=new Date(yy,mm,0), dim=mEnd.getDate();
+  let tSal=0,tOnb=0,tDue=0;
+  const rows=S.employees.filter(e=>{const s2=D(e.start);const en=e.endDate?D(e.endDate):null;return s2<=mEnd&&(!en||en>=mStart);}).map(e=>{
+    const sal=totalSalary(e), perDay=sal/22, onb=(e.visaCost||0)+(e.insCost||0);
+    const s2=D(e.start), en=e.endDate?D(e.endDate):null;
+    const aS=s2>mStart?s2:mStart, aE=(en&&en<mEnd)?en:mEnd;
+    const active=Math.max(0,daysBetween(aS,aE)+1);
+    const full=(s2<=mStart)&&(!en||en>=mEnd);
+    const joined=s2>=mStart&&s2<=mEnd;
+    let due=full?sal:sal*(active/dim); if(joined)due+=onb;
+    tSal+=sal;tOnb+=onb;tDue+=due;
+    return {e,sal,perDay,onb,due,joined,full};
+  });
+  view.innerHTML=`<div class="sec-h"><h2>Monthly salaries</h2><input type="month" value="${salaryMonth}" onchange="salaryMonth=this.value;setView('salary')" style="max-width:175px"></div>
+   <div class="tablewrap" style="overflow-x:auto">${rows.length?`<table><thead><tr><th>ID</th><th>Employee</th><th>Role</th><th>Start</th><th class="right">Monthly salary</th><th class="right">Onboarding</th><th class="right">Per day \u00f722</th><th class="right">Due this month</th></tr></thead><tbody>
+   ${rows.map(r=>`<tr><td class="mono">${r.e.empId||''}</td><td class="emp-name">${r.e.name}</td><td>${r.e.designation||'\u2014'}</td><td class="mono">${prettyD(r.e.start)}</td><td class="right mono">${aed(r.sal)}</td><td class="right mono">${r.onb?aed(r.onb):'\u2014'}</td><td class="right mono">${aed(r.perDay)}</td><td class="right mono"><b>${aed(r.due)}</b>${r.joined?' <span class="badge b-amber">joined</span>':(!r.full?' <span class="badge b-grey">part</span>':'')}</td></tr>`).join("")}
+   </tbody><tfoot><tr style="font-weight:700;background:#FBFAF6"><td colspan="4">Total \u2014 ${rows.length} employee(s)</td><td class="right mono">${aed(tSal)}</td><td class="right mono">${aed(tOnb)}</td><td></td><td class="right mono" style="color:var(--teal)">${aed(tDue)}</td></tr></tfoot></table>`:`<div class="empty"><b>No payroll for ${salaryMonth}</b>No employees were active that month.</div>`}</div>
+   <div class="hint" style="margin-top:10px">Per-day = total salary \u00f7 22. Due = full monthly salary for a complete month, pro-rated by calendar days for partial months (joiners/leavers). Onboarding (visa + insurance) cost is added in the employee's joining month.</div>`;
+}
+
+/* ---------- Documents (admin & full) ---------- */
+const DOC_TYPES=["Passport","Emirates ID","Visa","Insurance","MOHRE card"];
+function rDocs(){
+  if(!isHR()){view.innerHTML=`<div class="empty"><b>Restricted</b>Documents are available to admins and full-access users only.</div>`;return;}
+  const emps=S.employees;
+  view.innerHTML=`<div class="sec-h"><h2>Employee documents</h2></div>
+   <div class="card" style="background:var(--teal-wash);border-color:#BcdAd4">Files upload to the shared OneDrive (demo@core-velocity.com \u2192 CoreV-HR/Documents). You must be signed in with Microsoft to upload or view.</div>
+   <div class="tablewrap" style="margin-top:14px;overflow-x:auto">${emps.length?`<table><thead><tr><th>Employee</th>${DOC_TYPES.map(t=>`<th>${t}</th>`).join("")}</tr></thead><tbody>
+   ${emps.map(e=>`<tr><td class="emp-name">${e.name}<div class="emp-sub mono">${e.empId||''}</div></td>
+     ${DOC_TYPES.map(t=>{const d=S.docs.find(x=>x.emp===e.id&&x.type===t);return `<td>${d?`<a class="btn g sm" href="${d.webUrl}" target="_blank" rel="noopener">View</a> <button class="btn danger sm" onclick="delDoc('${d.id}')">\u2715</button><div class="emp-sub" style="margin-top:3px">${prettyD((d.uploadedAt||'').slice(0,10))}</div>`:`<button class="btn g sm" onclick="pickDoc('${e.id}','${t}')">Upload</button>`}</td>`}).join("")}
+   </tr>`).join("")}
+   </tbody></table>`:`<div class="empty"><b>No employees</b>Add employees first.</div>`}</div>`;
+}
+function pickDoc(empId,type){const i=document.createElement("input");i.type="file";i.accept="image/*,application/pdf";i.onchange=()=>{const f=i.files&&i.files[0];if(f)uploadDoc(empId,type,f);};i.click();}
+async function uploadDoc(empId,type,file){
+  if(!msalAccount){alert("Sign in with Microsoft to upload documents to the shared drive.");return;}
+  if(file.size>15*1024*1024){alert("Please use a file under 15 MB.");return;}
+  flash("Uploading "+type+"\u2026");
+  try{const item=await graphUploadFile(empId,type,file);
+    S.docs=S.docs.filter(d=>!(d.emp===empId&&d.type===type));
+    S.docs.push({id:uid(),emp:empId,type,fileName:file.name,webUrl:item.webUrl||"",itemId:item.id||"",size:file.size,uploadedAt:new Date().toISOString(),by:currentUser});
+    dbSet();setView("docs");flash(type+" uploaded");
+  }catch(e){flash("Upload failed \u2014 check shared-drive access");}
+}
+function delDoc(id){if(!confirm("Remove this document reference? (The file itself stays in OneDrive.)"))return;S.docs=S.docs.filter(d=>d.id!==id);dbSet();setView("docs");}
+async function graphUploadFile(empId,type,file){
+  const tok=await getAccessToken();
+  const fn=encodeURIComponent((type+"-"+file.name).replace(/[^\w.\- ]/g,"_"));
+  const url=`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(ONEDRIVE_CONFIG.sharedDriveUser)}/drive/root:/CoreV-HR/Documents/${encodeURIComponent(empId)}/${fn}:/content`;
+  const res=await fetch(url,{method:"PUT",headers:{Authorization:"Bearer "+tok,"Content-Type":file.type||"application/octet-stream"},body:file});
+  if(!res.ok)throw new Error("HTTP "+res.status);
+  return await res.json();
+}
+
+/* ---------- Letter request notification email ---------- */
+async function notifyLetterRequest(l){
+  const e=S.employees.find(x=>x.id===l.emp)||{};
+  const recips=["ahmed@core-velocity.com","gladys@core-velocity.com"];
+  const subject=`Letter request: ${l.ltype} \u2014 ${e.name||''} (${l.ref})`;
+  const intro=`A new ${l.ltype} has been requested in the CoreV | OxeFit portal.\n\nEmployee: ${e.name||''} (${e.empId||''})\nType: ${l.ltype}\nAddressed to: ${l.addressedTo||'To Whom It May Concern'}\nReason: ${l.reason||'-'}\nRequested by: ${currentUser||'-'}\nStatus: ${l.status}\n`;
+  if(msalAccount){
+    try{
+      const tok=await getAccessToken();
+      const body=intro+"\n--- Draft letter ---\n"+buildLetterText(l);
+      const res=await fetch("https://graph.microsoft.com/v1.0/me/sendMail",{method:"POST",headers:{Authorization:"Bearer "+tok,"Content-Type":"application/json"},body:JSON.stringify({message:{subject,body:{contentType:"Text",content:body},toRecipients:recips.map(a=>({emailAddress:{address:a}}))},saveToSentItems:true})});
+      if(res.ok){flash("Request emailed to Ahmed & Gladys");return;}
+    }catch(_){}
+  }
+  const mailto=`mailto:${recips.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(intro+"\nOpen the portal to view and print the full letter.")}`;
+  try{window.open(mailto,"_blank");}catch(_){}
+  flash("Email draft opened for Ahmed & Gladys");
+}
+
+/* ---------- demo / preview (no sign-in, nothing saved) ---------- */
+function enterDemo(){DEMO=true;role="admin";currentUser="Demo Admin";currentEmail="";
+  document.getElementById("loginScreen").style.display="none";document.getElementById("appRoot").classList.add("ready");
+  seedDemo(true);applyLogo();applyRoleUI();updateBadges();setView("dash");setSync("offline","Demo \u2014 not saved");}
 
 /* ---------- modal ---------- */
 function modal(title,bodyHTML,buttons=[]){
@@ -591,7 +684,7 @@ $("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim")close();});
 
 /* ---------- roles / identity UI ---------- */
 function updateWho(){const w=$("#whoami");if(w)w.textContent=currentUser?(currentUser+" · "+(role==="admin"?"Admin":role==="full"?"Full access":"Employee")):"";}
-function applyRoleUI(){const set=document.querySelector('[data-v="settings"]'),eos=document.querySelector('[data-v="eos"]');if(set)set.style.display=isAdmin()?"":"none";if(eos)eos.style.display=isHR()?"":"none";updateWho();}
+function applyRoleUI(){const q=v=>document.querySelector('[data-v="'+v+'"]');const set=q("settings"),eos=q("eos"),sal=q("salary"),dc=q("docs");if(set)set.style.display=isAdmin()?"":"none";if(sal)sal.style.display=isAdmin()?"":"none";if(eos)eos.style.display=isHR()?"":"none";if(dc)dc.style.display=isHR()?"":"none";updateWho();}
 function updateBadges(){const p=S.letters.filter(l=>l.status!=="Issued"&&l.status!=="Rejected").length;const b=$("#navLetters");if(b){if(p){b.style.display="";b.textContent=p;}else b.style.display="none";}}
 
 /* ---------- seed ---------- */
