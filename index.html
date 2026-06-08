@@ -1,4 +1,3 @@
-
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CoreV | OxeFit Portal</title>
@@ -108,8 +107,16 @@ tbody tr:hover{background:#FCFBF7}
 .login-hint{font-size:12px;color:var(--ink-soft);margin-top:18px}.login-hint b{color:var(--teal)}
 .login-error{color:var(--red);font-size:12.5px;margin-top:14px;display:none;background:var(--red-wash);padding:10px;border-radius:8px;text-align:left}
 .login-setup{font-size:11.5px;color:var(--ink-soft);margin-top:16px;text-align:left;background:#FBFAF6;border:1px solid var(--line);border-radius:8px;padding:12px;line-height:1.6;display:none}
-.sync-chip{display:inline-flex;align-items:center;font-size:15px;cursor:pointer;line-height:1}
-.sync-chip.connected{color:var(--green)}.sync-chip.syncing{color:var(--amber)}.sync-chip.offline{color:var(--ink-soft)}.sync-chip.error{color:var(--red)}
+.syncbar{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;cursor:pointer;border:1px solid var(--line);background:var(--card);transition:.15s;white-space:nowrap}
+.syncbar:hover{border-color:var(--ink-soft)}
+.syncbar .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-soft);flex:none}
+.syncbar.connected{color:var(--green);border-color:#Bfe0CC}.syncbar.connected .dot{background:var(--green)}
+.syncbar.syncing{color:var(--amber)}.syncbar.syncing .dot{background:var(--amber)}
+.syncbar.warn{color:var(--amber);border-color:#EAD3B0;background:var(--amber-wash)}.syncbar.warn .dot{background:var(--amber)}
+.syncbar.error{color:var(--red);border-color:#EBC4BE;background:var(--red-wash)}.syncbar.error .dot{background:var(--red)}
+.syncbar.offline .dot{background:var(--ink-soft)}
+.syncbanner{background:var(--amber-wash);color:#7a4a12;border:1px solid #EAD3B0;border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:18px;line-height:1.5}
+.syncbanner b{color:#5e3a0e}
 #brandLogo{max-height:54px;max-width:190px;width:auto;height:auto;object-fit:contain;margin:2px 4px 14px;display:none}
 .app{display:none}.app.ready{display:grid}
 </style>
@@ -141,18 +148,19 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="docs">‣ Documents</div>
     <div class="nav" data-v="eos">‣ End of Service</div>
     <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v1.7<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v1.8<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
     <div class="top">
       <div><h1 id="vTitle">Dashboard</h1><p id="vSub"></p></div>
       <div class="rolebox">
-        <span class="sync-chip offline" id="syncChip" onclick="manualSync()" title="OneDrive sync">○</span>
+        <div class="syncbar offline" id="syncBar" onclick="manualSync()" title="Click to sync now"><span class="dot"></span><span id="syncText">Connecting…</span></div>
         <span id="whoami" class="muted"></span>
         <button class="btn g sm" onclick="signOut()">Sign out</button>
       </div>
     </div>
+    <div id="syncBanner" class="syncbanner" style="display:none"></div>
     <div id="view"></div>
   </main>
 </div>
@@ -725,10 +733,20 @@ function renderCurrent(){ if(document.querySelector('#scrim.show'))return; const
   if(ae&&(ae.tagName==="INPUT"||ae.tagName==="SELECT"||ae.tagName==="TEXTAREA"))return; setView(cur); }
 
 /* ============ Microsoft auth + OneDrive shared sync ============ */
-let msalInstance=null,msalAccount=null,syncTimer=null,_uploadInFlight=false,_uploadQueued=false,_store=null,_pollStarted=false,_pfNoted=false;
+let msalInstance=null,msalAccount=null,syncTimer=null,_uploadInFlight=false,_uploadQueued=false,_store=null,_pollStarted=false,_pfNoted=false,lastSyncAt=null,lastUpdatedBy="",onOwnDrive=false;
 
-function setSync(status,text){const c=$("#syncChip");if(!c)return;c.className="sync-chip "+status;c.title=text||status;
-  c.textContent=status==="connected"?"\u25cf":status==="syncing"?"\u25d0":status==="error"?"\u26a0":"\u25cb";}
+function setSync(status,text){const bar=$("#syncBar");if(!bar)return;bar.className="syncbar "+status;const t=$("#syncText");if(t)t.textContent=text||status;updateSyncBanner();}
+function fmtTime(d){try{return new Date(d).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
+function syncedText(){
+  if(onOwnDrive)return "Your drive only"+(lastSyncAt?" \u00b7 "+fmtTime(lastSyncAt):"");
+  let t="Shared";
+  if(lastUpdatedBy)t+=" \u00b7 by "+lastUpdatedBy;
+  if(lastSyncAt)t+=" "+fmtTime(lastSyncAt);
+  return t;
+}
+function updateSyncBanner(){const b=$("#syncBanner");if(!b)return;
+  if(onOwnDrive){b.style.display="block";b.innerHTML="\u26a0 Your changes are saving to <b>your own OneDrive</b> and are <b>not shared</b> with the team. Ask IT to share the \u201c"+ONEDRIVE_CONFIG.sharedFolder+"\u201d folder in "+ONEDRIVE_CONFIG.sharedDriveUser+"\u2019s OneDrive with <b>edit</b> rights, then click the sync status to retry.";}
+  else b.style.display="none";}
 function scheduleSync(){ if(!msalAccount)return; clearTimeout(syncTimer); syncTimer=setTimeout(uploadToOneDrive,2000); }
 
 async function initMsal(){
@@ -825,7 +843,10 @@ async function downloadFromOneDrive(){
     const tok=await getAccessToken();
     const r=await fetchRemote(tok);
     if(r.status===404){await uploadToOneDrive();return;}
-    applyEnvelope(r.env);saveLocal();setSync("connected","Synced");
+    applyEnvelope(r.env);saveLocal();
+    onOwnDrive=!!(r.st&&r.st.kind==="mydrive");lastSyncAt=Date.now();
+    lastUpdatedBy=(r.env&&r.env._meta&&r.env._meta.updatedBy)||lastUpdatedBy;
+    setSync(onOwnDrive?"warn":"connected",syncedText());
   }catch(e){
     if(e&&e.code===403){failWrite(403);return;}
     setSync("error","Sync error (using local copy)");
@@ -835,6 +856,7 @@ async function uploadToOneDrive(){
   if(!msalAccount)return;
   if(_uploadInFlight){_uploadQueued=true;return;}
   _uploadInFlight=true;
+  const done=kind=>{onOwnDrive=(kind==="mydrive");lastSyncAt=Date.now();lastUpdatedBy=currentUser||lastUpdatedBy;setSync(onOwnDrive?"warn":"connected",syncedText());};
   try{
     setSync("syncing","Saving\u2026");
     const tok=await getAccessToken();
@@ -845,16 +867,16 @@ async function uploadToOneDrive(){
       let res=await put(st);
       if((res.status===403||res.status===404)&&ONEDRIVE_CONFIG.personalFallback){
         const my={kind:"mydrive"};const r2=await put(my);
-        if(r2.ok||r2.status===201){_store=my;setSync("connected","Saved (own drive)");notePersonalFallback();return;}
+        if(r2.ok||r2.status===201){done("mydrive");notePersonalFallback();return;}
         return failWrite(r2.status);
       }
       if(res.status===403)return failWrite(403);
       if(!res.ok&&res.status!==201)throw new Error("HTTP "+res.status);
-      _store=st;setSync("connected","Synced");return;
+      _store=st;done(st.kind);return;
     }
     if(ONEDRIVE_CONFIG.personalFallback){
       const my={kind:"mydrive"};const r=await put(my);
-      if(r.ok||r.status===201){_store=my;setSync("connected","Saved (own drive)");notePersonalFallback();return;}
+      if(r.ok||r.status===201){done("mydrive");notePersonalFallback();return;}
       return failWrite(r.status);
     }
     return failWrite(403);
@@ -864,8 +886,11 @@ async function uploadToOneDrive(){
 function startPolling(){ setInterval(async()=>{
   if(!msalAccount||_uploadInFlight)return;
   try{const tok=await getAccessToken();const r=await fetchRemote(tok);
-    if(r.status===200){applyEnvelope(r.env);saveLocal();renderCurrent();setSync("connected","Synced");}}catch(_){}
-}, 30000); }
+    if(r.status===200){applyEnvelope(r.env);saveLocal();renderCurrent();
+      onOwnDrive=!!(r.st&&r.st.kind==="mydrive");lastSyncAt=Date.now();
+      lastUpdatedBy=(r.env&&r.env._meta&&r.env._meta.updatedBy)||lastUpdatedBy;
+      setSync(onOwnDrive?"warn":"connected",syncedText());}}catch(_){}
+}, 15000); }
 async function manualSync(){ if(!msalAccount){flash("Sign in first.");return;} await downloadFromOneDrive(); renderCurrent(); }
 
 /* ---------- boot ---------- */
