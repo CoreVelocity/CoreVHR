@@ -148,7 +148,7 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="docs">‣ Documents</div>
     <div class="nav" data-v="eos">‣ End of Service</div>
     <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v2.0<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v2.1<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -318,7 +318,7 @@ function rEmp(){
       <td class="mono">${prettyD(e.start)}</td>
       <td>${fmt1(yearsOfService(e))} yrs</td>
       ${isHR()?`<td class="right mono">${aed(totalSalary(e))}</td>`:''}
-      <td class="row-act"><button class="btn g sm" onclick="empView('${e.id}')">Open</button>${isHR()?`<button class="btn g sm" onclick="empForm('${e.id}')">Edit</button>`:''}</td>
+      <td class="row-act"><button class="btn g sm" onclick="empView('${e.id}')">Open</button>${isHR()?`<button class="btn g sm" onclick="empForm('${e.id}')">Edit</button><button class="btn danger sm" onclick="deleteEmployee('${e.id}')">Delete</button>`:''}</td>
    </tr>`).join("")}</tbody></table>`:`<div class="empty"><b>No employees yet</b>Add your first team member to get started.</div>`}</div>`;
 }
 
@@ -348,7 +348,7 @@ function empView(id){
      <div class="card"><label>Assets held</label><div class="v mono" style="font-size:24px;font-family:Montserrat">${assets.length}</div><div class="hint">${assets.map(a=>a.type).join(", ")||'None assigned'}</div></div>
    </div>
    ${exp.length?`<div style="margin-top:14px"><label>Document expiries</label><div class="pill-row">${exp.map(x=>`<span class="badge ${x.days<=30?'b-red':x.days<=60?'b-amber':'b-green'}">${x.label}: ${prettyD(x.date)}</span>`).join("")}</div></div>`:''}
-  `,isHR()?[["Edit",`empForm('${id}')`,"g"]]:[]);
+  `,isHR()?[["Delete",`deleteEmployee('${id}')`,"danger"],["Edit",`empForm('${id}')`,"g"]]:[]);
 }
 
 function empForm(id){
@@ -393,6 +393,16 @@ function saveEmp(id){
   obj.ticket=g("ticket").checked;obj.misconduct=g("misconduct").checked;
   obj._ts=Date.now();if(id){const i=S.employees.findIndex(e=>e.id===id);S.employees[i]={...S.employees[i],...obj};}else S.employees.push(obj);
   dbSet();closeModal();setView("emp");
+}
+
+function deleteEmployee(id){
+  const e=S.employees.find(x=>x.id===id); if(!e)return;
+  if(!confirm("Delete "+(e.name||"this employee")+" and all of their leave, weekend/TOIL, letter, asset and document records? This cannot be undone."))return;
+  S.tombstones=S.tombstones||{}; const now=Date.now();
+  S.tombstones[id]=now;
+  ["leaves","weekend","toil","letters","assets","docs"].forEach(k=>{ S[k]=(S[k]||[]).filter(r=>{ if(r&&r.emp===id){ S.tombstones[r.id]=now; return false; } return true; }); });
+  S.employees=S.employees.filter(x=>x.id!==id);
+  dbSet(); closeModal(); updateBadges(); setView("emp"); flash((e.name||"Employee")+" deleted");
 }
 
 /* ---------- Leave ---------- */
