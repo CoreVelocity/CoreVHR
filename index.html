@@ -142,13 +142,14 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="emp">‣ Employees</div>
     <div class="nav" data-v="leave">‣ Leave</div>
     <div class="nav" data-v="toil">‣ Weekend / TOIL</div>
+    <div class="nav" data-v="iloe">‣ ILOE</div>
     <div class="nav" data-v="letters">‣ Letters <small id="navLetters" style="display:none"></small></div>
     <div class="nav" data-v="assets">‣ Assets</div>
     <div class="nav" data-v="salary">‣ Monthly Salaries</div>
     <div class="nav" data-v="docs">‣ Documents</div>
     <div class="nav" data-v="eos">‣ End of Service</div>
     <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v2.1<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v2.2<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -257,7 +258,7 @@ function toilBalance(emp){return toilEarned(emp)-toilTaken(emp);}
 
 /* ----- expiries ----- */
 function expiries(emp){
-  const items=[["Visa",emp.visaExpiry],["Emirates ID",emp.eidExpiry],["Passport",emp.passportExpiry],["Insurance",emp.insExpiry]];
+  const items=[["Visa",emp.visaExpiry],["Emirates ID",emp.eidExpiry],["Passport",emp.passportExpiry],["Insurance",emp.insExpiry],["ILOE",emp.iloeExpiry]];
   return items.filter(([_,d])=>d).map(([label,d])=>{const days=daysBetween(today(),D(d));return{label,date:d,days};});
 }
 
@@ -267,7 +268,7 @@ const view=$("#view");
 const titles={dash:["Dashboard","Live view of the team"],emp:["Employees","Master records, compensation & compliance"],
   leave:["Leave","Annual & sick leave balances"],toil:["Weekend / TOIL","Weekend work logged at "+0+"× — time off in lieu"],
   letters:["Letters","NOC, salary certificate & employment letters"],assets:["Assets","Company deliverables per employee"],
-  eos:["End of Service","Gratuity & final settlement (MOHRE)"],salary:["Monthly Salaries","Payroll & cost per employee"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"]};
+  eos:["End of Service","Gratuity & final settlement (MOHRE)"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],salary:["Monthly Salaries","Payroll & cost per employee"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"]};
 let cur="dash";
 
 function isHR(){return role==="admin"||role==="full";}
@@ -277,7 +278,7 @@ function visibleEmps(){return isHR()?S.employees:S.employees.filter(e=>e.id===se
 
 function setView(v){cur=v;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("on",n.dataset.v===v));
   $("#vTitle").textContent=titles[v][0]; $("#vSub").textContent= v==="toil"? "Weekend work logged at "+S.settings.toilMult+"× — time off in lieu" : titles[v][1];
-  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,salary:rSalary,docs:rDocs,settings:rSettings})[v]();}
+  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,iloe:rIloe,salary:rSalary,docs:rDocs,settings:rSettings})[v]();}
 
 function statusBadge(e){const m={Active:"b-green",Probation:"b-amber",Notice:"b-amber",Exited:"b-grey"};return `<span class="badge ${m[e.status]||'b-grey'}"><span class="dot" style="background:currentColor"></span>${e.status}</span>`;}
 function expBadge(days){if(days<0)return`<span class="badge b-red">Expired ${-days}d</span>`;if(days<=30)return`<span class="badge b-red">${days}d left</span>`;if(days<=60)return`<span class="badge b-amber">${days}d left</span>`;return`<span class="badge b-green">${days}d</span>`;}
@@ -638,6 +639,61 @@ function rSalary(){
 
 /* ---------- Documents (admin & full) ---------- */
 const DOC_TYPES=["Passport","Emirates ID","Visa","Insurance","MOHRE card"];
+/* ---------- ILOE compliance (self-service) ---------- */
+function iloeCategory(e){return (e.basic||0)<=16000 ? "A (basic \u2264 AED 16,000)" : "B (basic > AED 16,000)";}
+function iloeStatus(e){
+  if(!e.iloeReg||!e.iloeExpiry) return {label:"Not registered",cls:"b-red"};
+  const d=daysBetween(today(),D(e.iloeExpiry));
+  if(d<0) return {label:"Expired "+(-d)+"d",cls:"b-red"};
+  if(d<=30) return {label:d+"d left",cls:"b-amber"};
+  return {label:"Compliant",cls:"b-green"};
+}
+function rIloe(){
+  const emps=visibleEmps();
+  let head="";
+  if(isHR()){
+    const comp=emps.filter(e=>iloeStatus(e).cls==="b-green").length;
+    const exp =emps.filter(e=>iloeStatus(e).cls==="b-amber").length;
+    const non =emps.filter(e=>iloeStatus(e).cls==="b-red").length;
+    head=`<div class="grid cards" style="margin-bottom:6px">
+      <div class="card stat"><div class="k">Compliant</div><div class="v" style="color:var(--green)">${comp}</div></div>
+      <div class="card stat"><div class="k">Expiring \u226430d</div><div class="v" style="color:var(--amber)">${exp}</div></div>
+      <div class="card stat"><div class="k">Non-compliant</div><div class="v" style="color:var(--red)">${non}</div></div>
+    </div>`;
+  }
+  view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">UAE law requires every employee to subscribe to <b>ILOE</b> (Involuntary Loss of Employment insurance) and keep the subscription paid. Record your payment date and expiry here. Category is set automatically from basic salary (A \u2264 AED 16,000, B above).</div>
+   ${head}
+   <div class="sec-h"><h2>${isHR()?"ILOE compliance":"My ILOE"}</h2></div>
+   <div class="tablewrap" style="overflow-x:auto">${emps.length?`<table><thead><tr><th>Employee</th><th>Category</th><th>Date paid</th><th>Expiry</th><th>Status</th><th class="right"></th></tr></thead><tbody>
+   ${emps.map(e=>{const st=iloeStatus(e);return `<tr>
+     <td class="emp-name">${e.name}<div class="emp-sub mono">${e.empId||''}</div></td>
+     <td>${iloeCategory(e)}</td>
+     <td class="mono">${e.iloePaid?prettyD(e.iloePaid):'\u2014'}</td>
+     <td class="mono">${e.iloeExpiry?prettyD(e.iloeExpiry):'\u2014'}</td>
+     <td><span class="badge ${st.cls}">${st.label}</span></td>
+     <td class="right">${(isHR()||e.id===selfId())?`<button class="btn ${e.iloeReg?'g':'p'} sm" onclick="iloeForm('${e.id}')">${e.iloeReg?'Update':'Register'}</button>`:''}</td>
+   </tr>`}).join("")}
+   </tbody></table>`:`<div class="empty"><b>No record</b>${isHR()?'Add employees first.':'Your employee record was not found \u2014 ask HR to set your work email so you can record your ILOE.'}</div>`}</div>`;
+}
+function iloeForm(empId){
+  if(!(isHR()||empId===selfId())){alert("You can only update your own ILOE details.");return;}
+  const e=S.employees.find(x=>x.id===empId);if(!e)return;
+  modal("ILOE details \u2014 "+e.name,`<div class="card" style="background:#FBFAF6;margin-bottom:12px"><div class="flex" style="justify-content:space-between"><span class="muted">Category (auto from basic salary)</span><b>${iloeCategory(e)}</b></div></div>
+   <div class="fgrid">
+     <div><label>Registered / subscribed</label><select id="i_reg"><option value="yes" ${e.iloeReg?"selected":""}>Yes</option><option value="no" ${!e.iloeReg?"selected":""}>No</option></select></div>
+     <div><label>Payment reference</label><input id="i_ref" value="${e.iloeRef||''}" placeholder="optional"></div>
+     <div><label>Date paid</label><input type="date" id="i_paid" value="${e.iloePaid||''}"></div>
+     <div><label>Expiry date</label><input type="date" id="i_exp" value="${e.iloeExpiry||''}"></div>
+   </div><div class="hint">ILOE is typically renewed annually \u2014 keep the expiry date current to stay compliant.</div>`,
+   [["Cancel","closeModal()","g"],["Save","saveIloe('"+empId+"')","p"]]);
+}
+function saveIloe(empId){
+  if(!(isHR()||empId===selfId())){alert("Not allowed.");return;}
+  const i=S.employees.findIndex(x=>x.id===empId);if(i<0)return;
+  S.employees[i]={...S.employees[i],iloeReg:$("#i_reg").value==="yes",iloeRef:$("#i_ref").value,iloePaid:$("#i_paid").value,iloeExpiry:$("#i_exp").value,_ts:Date.now()};
+  dbSet();closeModal();setView("iloe");flash("ILOE details saved");
+}
+
 function rDocs(){
   if(!isHR()){view.innerHTML=`<div class="empty"><b>Restricted</b>Documents are available to admins and full-access users only.</div>`;return;}
   const emps=S.employees;
