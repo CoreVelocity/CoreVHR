@@ -148,7 +148,7 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="docs">‣ Documents</div>
     <div class="nav" data-v="eos">‣ End of Service</div>
     <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v1.8<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v1.9<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -590,7 +590,8 @@ function rSettings(){
    <div class="sec-h"><h2>Access (Microsoft sign-in)</h2></div>
    <div class="card" style="max-width:640px"><div class="pill-row"><span class="badge b-teal">Admin: Ahmed, Sami, Kamal</span><span class="badge b-green">Full access: Gladys</span><span class="badge b-grey">Everyone else: own record only</span></div>
    <div class="hint" style="margin-top:10px">Roles are assigned by work email in <b>ROLE_MAP</b> at the top of the file. Employees see only the record whose <b>work email</b> matches their Microsoft login — so set each employee's email correctly.</div></div>
-   <div class="sec-h"><h2>Data</h2></div><div class="card" style="max-width:640px"><p class="muted" style="margin-bottom:10px">Data is shared via OneDrive (demo@core-velocity.com).</p><button class="btn g" onclick="seedDemo(true)">Load sample data</button> <button class="btn danger" onclick="wipe()">Clear all data</button></div>`;
+   <div class="sec-h"><h2>Sync</h2></div><div class="card" style="max-width:640px"><p class="muted" style="margin-bottom:10px">Shared via OneDrive \u2014 folder \u201c${ONEDRIVE_CONFIG.sharedFolder}\u201d in ${ONEDRIVE_CONFIG.sharedDriveUser}.</p><button class="btn g" onclick="runDiagnostics()">Run sync diagnostics</button> <button class="btn g" onclick="manualSync()">Sync now</button></div>
+   <div class="sec-h"><h2>Data</h2></div><div class="card" style="max-width:640px"><button class="btn g" onclick="seedDemo(true)">Load sample data</button> <button class="btn danger" onclick="wipe()">Clear all data</button></div>`;
 }
 function saveSettings(){["companyName","tradeLicense","phone","address","signatory","signatoryTitle"].forEach(k=>S.settings[k]=$("#s_"+k).value);
   ["carryCap","dailyHours","toilMult"].forEach(k=>S.settings[k]=+$("#s_"+k).value||S.settings[k]);
@@ -656,9 +657,7 @@ async function graphUploadFile(empId,type,file){
   const tok=await getAccessToken();
   const fn=encodeURIComponent((type+"-"+file.name).replace(/[^\w.\- ]/g,"_"));
   const st=_store||await resolveStore(tok);
-  let url;
-  if(st&&st.kind==="folder") url=`https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(st.driveId)}/items/${encodeURIComponent(st.folderItemId)}:/Documents/${encodeURIComponent(empId)}/${fn}:/content`;
-  else url=`https://graph.microsoft.com/v1.0/me/drive/root:/CoreV-HR/Documents/${encodeURIComponent(empId)}/${fn}:/content`;
+  const url=docsBaseUrl(st,empId,fn);
   const res=await fetch(url,{method:"PUT",headers:{Authorization:"Bearer "+tok,"Content-Type":file.type||"application/octet-stream"},body:file});
   if(!res.ok)throw new Error("HTTP "+res.status);
   return await res.json();
@@ -792,24 +791,44 @@ async function getAccessToken(){
   try{const r=await msalInstance.acquireTokenSilent(req);return r.accessToken;}
   catch(e){await msalInstance.acquireTokenRedirect(req);throw e;}
 }
+function itemBase(st){return st.driveId?`https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(st.driveId)}/items/${encodeURIComponent(st.kind==="file"?st.itemId:st.folderItemId)}`:`https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(st.kind==="file"?st.itemId:st.folderItemId)}`;}
 function fileContentUrl(st){
-  if(st.kind==="file") return `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(st.driveId)}/items/${encodeURIComponent(st.itemId)}/content`;
-  if(st.kind==="folder") return `https://graph.microsoft.com/v1.0/drives/${encodeURIComponent(st.driveId)}/items/${encodeURIComponent(st.folderItemId)}:/${encodeURIComponent(ONEDRIVE_CONFIG.fileName)}:/content`;
+  if(st.kind==="file") return itemBase(st)+"/content";
+  if(st.kind==="folder") return itemBase(st)+`:/${encodeURIComponent(ONEDRIVE_CONFIG.fileName)}:/content`;
   return `https://graph.microsoft.com/v1.0/me/drive/root:/CoreV-HR/${encodeURIComponent(ONEDRIVE_CONFIG.fileName)}:/content`;
 }
+function docsBaseUrl(st,empId,fn){
+  if(st&&st.kind==="folder") return itemBase(st)+`:/Documents/${encodeURIComponent(empId)}/${fn}:/content`;
+  return `https://graph.microsoft.com/v1.0/me/drive/root:/CoreV-HR/Documents/${encodeURIComponent(empId)}/${fn}:/content`;
+}
+function folderFromItem(it){const ri=it.remoteItem||it;const d=(ri.parentReference&&ri.parentReference.driveId)||(it.parentReference&&it.parentReference.driveId)||null;const id=ri.id||it.id;return id?{kind:"folder",driveId:d,folderItemId:id}:null;}
 async function resolveStore(tok,force){
   if(_store&&!force)return _store;
   const fname=(ONEDRIVE_CONFIG.fileName||"").toLowerCase();
   const fold=(ONEDRIVE_CONFIG.sharedFolder||"").toLowerCase();
+  const auth={Authorization:"Bearer "+tok};
+  // (A) sharedWithMe — the file directly, or the OXEFIT folder
   try{
-    const res=await fetch("https://graph.microsoft.com/v1.0/me/drive/sharedWithMe",{headers:{Authorization:"Bearer "+tok}});
-    if(res.ok){
-      const body=await res.json();const items=(body&&Array.isArray(body.value))?body.value:[];
+    const res=await fetch("https://graph.microsoft.com/v1.0/me/drive/sharedWithMe",{headers:auth});
+    if(res.ok){const items=((await res.json()).value)||[];
       for(const it of items){const ri=it.remoteItem||it;const nm=(it.name||ri.name||"").toLowerCase();const d=ri.parentReference&&ri.parentReference.driveId;const id=ri.id;
         if(d&&id&&!ri.folder&&nm===fname){_store={kind:"file",driveId:d,itemId:id};return _store;}}
-      for(const it of items){const ri=it.remoteItem||it;const nm=(it.name||ri.name||"").toLowerCase();const d=ri.parentReference&&ri.parentReference.driveId;const id=ri.id;
-        if(d&&id&&ri.folder&&(nm===fold||!fold)){_store={kind:"folder",driveId:d,folderItemId:id};return _store;}}
+      for(const it of items){const ri=it.remoteItem||it;const nm=(it.name||ri.name||"").toLowerCase();
+        if(ri.folder&&nm===fold){const st=folderFromItem(it);if(st){_store=st;return _store;}}}
     }
+  }catch(_){}
+  // (B) own drive root — OXEFIT as a real folder OR an "Add shortcut to My files" mount (remoteItem)
+  try{
+    const res=await fetch("https://graph.microsoft.com/v1.0/me/drive/root/children?$top=400",{headers:auth});
+    if(res.ok){const items=((await res.json()).value)||[];
+      for(const it of items){const nm=(it.name||"").toLowerCase();
+        if(nm===fold&&(it.folder||it.remoteItem)){const st=folderFromItem(it);if(st){_store=st;return _store;}}}
+    }
+  }catch(_){}
+  // (C) directly address the service account's OXEFIT folder (works if you have access)
+  try{
+    const res=await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(ONEDRIVE_CONFIG.sharedDriveUser)}/drive/root:/${encodeURIComponent(ONEDRIVE_CONFIG.sharedFolder)}`,{headers:auth});
+    if(res.ok){const it=await res.json();const d=(it.parentReference&&it.parentReference.driveId)||null;if(it.id){_store={kind:"folder",driveId:d,folderItemId:it.id};return _store;}}
   }catch(_){}
   return null;
 }
@@ -891,6 +910,25 @@ function startPolling(){ setInterval(async()=>{
       lastUpdatedBy=(r.env&&r.env._meta&&r.env._meta.updatedBy)||lastUpdatedBy;
       setSync(onOwnDrive?"warn":"connected",syncedText());}}catch(_){}
 }, 15000); }
+async function runDiagnostics(){
+  if(!msalAccount){alert("Sign in with Microsoft first.");return;}
+  let out="Signed in as: "+currentEmail+"\n";
+  try{
+    const tok=await getAccessToken();const auth={Authorization:"Bearer "+tok};
+    let sw=await fetch("https://graph.microsoft.com/v1.0/me/drive/sharedWithMe",{headers:auth});
+    out+="\nShared with me ("+sw.status+"):\n";
+    if(sw.ok){const v=((await sw.json()).value)||[];if(!v.length)out+="  (nothing shared)\n";v.forEach(it=>{const ri=it.remoteItem||it;out+="  \u2022 "+(it.name||ri.name)+(ri.folder?" [folder]":" [file]")+"\n";});}
+    let rc=await fetch("https://graph.microsoft.com/v1.0/me/drive/root/children?$top=400",{headers:auth});
+    out+="\nMy OneDrive root:\n";
+    if(rc.ok){const v=((await rc.json()).value)||[];v.forEach(it=>{out+="  \u2022 "+it.name+(it.folder?" [folder]":it.remoteItem?" [shortcut]":" [file]")+"\n";});}
+    _store=null;const st=await resolveStore(tok,true);
+    out+="\nLooking for folder: \u201c"+ONEDRIVE_CONFIG.sharedFolder+"\u201d / file: "+ONEDRIVE_CONFIG.fileName+"\n";
+    out+="Resolved target: "+(st?(st.kind+" (driveId="+(st.driveId||"my-drive")+")"):"NOT FOUND \u2192 would use your personal OneDrive")+"\n";
+    out+="Write URL:\n  "+fileContentUrl(st||{kind:"mydrive"})+"\n";
+    if(st){let chk=await fetch(fileContentUrl(st),{headers:auth});out+="\nData file currently there: "+(chk.status===200?"YES":chk.status===404?"no (will be created on next save)":"status "+chk.status)+"\n";}
+  }catch(e){out+="\nError: "+((e&&e.message)||e);}
+  modal("Sync diagnostics",`<div class="letter-preview" style="max-height:52vh;overflow:auto;font-size:11.5px">${out.replace(/</g,"&lt;")}</div>`,[["Copy",`(function(){navigator.clipboard&&navigator.clipboard.writeText(${JSON.stringify(out)});})()`,"g"],["Close","closeModal()","p"]]);
+}
 async function manualSync(){ if(!msalAccount){flash("Sign in first.");return;} await downloadFromOneDrive(); renderCurrent(); }
 
 /* ---------- boot ---------- */
