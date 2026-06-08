@@ -26,6 +26,14 @@ body{background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",sans-s
 .nav{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;color:#C7CDF0;cursor:pointer;font-weight:500;transition:.15s}
 .nav:hover{background:rgba(255,255,255,.07);color:#fff}
 .nav.on{background:var(--teal);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.navhead{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:9px;color:#9AA6E6;cursor:pointer;font-weight:700;font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;transition:.15s;user-select:none}
+.navhead:hover{color:#fff;background:rgba(255,255,255,.05)}
+.navhead .gcaret{transition:.2s;font-size:15px;opacity:.8}
+.navgroup.open .navhead .gcaret{transform:rotate(90deg)}
+.navsub{display:none;flex-direction:column;gap:3px;margin:2px 0 8px}
+.navgroup.open .navsub{display:flex}
+.navsub .nav{padding:8px 12px 8px 24px;font-size:13.5px}
+.navtop{margin-top:2px}
 .nav svg{width:17px;height:17px;flex:none}
 .nav small{margin-left:auto;background:var(--amber);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;font-weight:600}
 .side-foot{margin-top:auto;font-size:11px;color:#8E99DA;padding:12px 8px 0;border-top:1px solid rgba(255,255,255,.12)}
@@ -145,6 +153,12 @@ tbody tr:hover{background:#FCFBF7}
 .org-person{background:#5B79CB;color:#fff;border-radius:10px;padding:9px 12px;margin-top:8px;text-align:center;font-weight:600;font-size:13.5px}
 .org-person small{display:block;font-weight:400;opacity:.92;font-size:11.5px}
 .org-func{background:#234B73;color:#fff;border-radius:8px;padding:7px 10px;margin-top:6px;font-size:11.5px;text-align:center;line-height:1.35}
+.clr-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--card)}
+.clr-item.done{background:var(--green-wash);border-color:#Bfe0CC}
+.clr-cb{flex:0 0 22px;width:22px;height:22px;border-radius:6px;border:2px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+.clr-item.done .clr-cb{background:var(--green);border-color:var(--green)}
+.clr-tx{flex:1}.clr-tx .sub{font-size:11.5px;color:var(--ink-soft)}
+.prog{height:10px;border-radius:6px;background:#EFEBE2;overflow:hidden}.prog i{display:block;height:100%;background:var(--teal);border-radius:6px}
 #brandLogo{max-height:54px;max-width:190px;width:auto;height:auto;object-fit:contain;margin:2px 4px 14px;display:none}
 .app{display:none}.app.ready{display:grid}
 </style>
@@ -166,21 +180,47 @@ tbody tr:hover{background:#FCFBF7}
 <div class="app" id="appRoot">
   <aside class="side">
     <img id="brandLogo" alt=""><div class="brand"><b>CoreV</b><span>OxeFit</span></div>
-    <div class="nav on" data-v="dash">‣ Dashboard</div>
-    <div class="nav" data-v="emp">‣ Employees</div>
-    <div class="nav" data-v="leave">‣ Leave</div>
-    <div class="nav" data-v="toil">‣ Overtime / TOIL</div>
-    <div class="nav" data-v="iloe">‣ ILOE</div>
-    <div class="nav" data-v="perf">‣ Performance</div>
-    <div class="nav" data-v="org">‣ Organization</div>
-    <div class="nav" data-v="handbook">‣ Company Handbook</div>
-    <div class="nav" data-v="letters">‣ Letters <small id="navLetters" style="display:none"></small></div>
-    <div class="nav" data-v="assets">‣ Assets</div>
-    <div class="nav" data-v="salary">‣ Monthly Salaries</div>
-    <div class="nav" data-v="docs">‣ Documents</div>
-    <div class="nav" data-v="eos">‣ End of Service</div>
-    <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v2.7<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="nav on navtop" data-v="dash">▸ Dashboard</div>
+
+    <div class="navgroup open" id="g_people">
+      <div class="navhead">People <span class="gcaret">›</span></div>
+      <div class="navsub">
+        <div class="nav" data-v="emp">Employees</div>
+        <div class="nav" data-v="org">Organization</div>
+        <div class="nav" data-v="docs">Documents</div>
+        <div class="nav" data-v="assets">Assets</div>
+      </div>
+    </div>
+
+    <div class="navgroup" id="g_leave">
+      <div class="navhead">Leave &amp; Time <span class="gcaret">›</span></div>
+      <div class="navsub">
+        <div class="nav" data-v="leave">Leave</div>
+        <div class="nav" data-v="toil">Overtime / TOIL</div>
+      </div>
+    </div>
+
+    <div class="navgroup" id="g_pay">
+      <div class="navhead">Payroll &amp; Compliance <span class="gcaret">›</span></div>
+      <div class="navsub">
+        <div class="nav" data-v="salary">Monthly Salaries</div>
+        <div class="nav" data-v="iloe">ILOE</div>
+        <div class="nav" data-v="letters">Letters <small id="navLetters" style="display:none"></small></div>
+        <div class="nav" data-v="eos">End of Service</div>
+        <div class="nav" data-v="off">Offboarding</div>
+      </div>
+    </div>
+
+    <div class="navgroup" id="g_perf">
+      <div class="navhead">Performance <span class="gcaret">›</span></div>
+      <div class="navsub">
+        <div class="nav" data-v="perf">Reviews &amp; Appraisals</div>
+        <div class="nav" data-v="handbook">Company Handbook</div>
+      </div>
+    </div>
+
+    <div class="nav navtop" data-v="settings">⚙ Settings</div>
+    <div class="side-foot">CoreV | OxeFit · v2.9<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -201,7 +241,7 @@ tbody tr:hover{background:#FCFBF7}
 
 <script>
 /* ============ config: Microsoft SSO + OneDrive shared sync ============ */
-const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","tombstones","settings"];
+const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tombstones","settings"];
 const ONEDRIVE_CONFIG = {
   clientId   : 'cd1b7f5f-5ff9-4066-ab4f-06f270a94fcb',          // same Azure app as the working Sales/Delivery tracker
   authority  : 'https://login.microsoftonline.com/core-velocity.com',
@@ -219,7 +259,7 @@ const ROLE_MAP = {
 };
 function roleForEmail(e){return ROLE_MAP[(e||'').toLowerCase().trim()]||'employee';}
 
-let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],tombstones:{},
+let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],offboardings:[],tombstones:{},
   settings:{companyName:"CoreV | OxeFit",tradeLicense:"",address:"Dubai, United Arab Emirates",phone:"",
     signatory:"",signatoryTitle:"HR Manager",carryCap:23,dailyHours:8,toilMult:3,weekdayMult:2,logo:""}};
 let role="employee", currentUser="", currentEmail="";
@@ -327,7 +367,7 @@ const view=$("#view");
 const titles={dash:["Dashboard","Live view of the team"],emp:["Employees","Master records, compensation & compliance"],
   leave:["Leave","Annual & sick leave balances"],toil:["Overtime / TOIL","Overtime in lieu — weekday 2× / weekend 3×"],
   letters:["Letters","NOC, salary certificate & employment letters"],assets:["Assets","Company deliverables per employee"],
-  eos:["End of Service","Gratuity & final settlement (MOHRE)"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],perf:["Performance","Reviews, appraisals & KPI scorecards"],org:["Organization","How CoreV | OxeFit operates today"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"]};
+  eos:["End of Service","Gratuity & final settlement (MOHRE)"],off:["Offboarding","Resignation / termination, clearance & final settlement"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],perf:["Performance","Reviews, appraisals & KPI scorecards"],org:["Organization","How CoreV | OxeFit operates today"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"]};
 let cur="dash";
 
 function isHR(){return role==="admin"||role==="full";}
@@ -335,9 +375,10 @@ function isAdmin(){return role==="admin";}
 function selfId(){const e=S.employees.find(x=>(x.email||'').toLowerCase()===currentEmail);return e?e.id:"__none__";}
 function visibleEmps(){return isHR()?S.employees:S.employees.filter(e=>e.id===selfId());}
 
-function setView(v){cur=v;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("on",n.dataset.v===v));
+function syncNavGroups(){document.querySelectorAll(".navgroup").forEach(g=>{if(g.querySelector(".nav.on"))g.classList.add("open");});}
+function setView(v){cur=v;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("on",n.dataset.v===v));syncNavGroups();
   $("#vTitle").textContent=titles[v][0]; $("#vSub").textContent= v==="toil"? ("Overtime in lieu — weekday "+(S.settings.weekdayMult||2)+"× / weekend "+(S.settings.toilMult||3)+"×") : titles[v][1];
-  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,iloe:rIloe,perf:rPerf,org:rOrg,handbook:rHandbook,salary:rSalary,docs:rDocs,settings:rSettings})[v]();}
+  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,off:rOff,iloe:rIloe,perf:rPerf,org:rOrg,handbook:rHandbook,salary:rSalary,docs:rDocs,settings:rSettings})[v]();}
 
 function statusBadge(e){const m={Active:"b-green",Probation:"b-amber",Notice:"b-amber",Exited:"b-grey"};return `<span class="badge ${m[e.status]||'b-grey'}"><span class="dot" style="background:currentColor"></span>${e.status}</span>`;}
 function expBadge(days){if(days<0)return`<span class="badge b-red">Expired ${-days}d</span>`;if(days<=30)return`<span class="badge b-red">${days}d left</span>`;if(days<=60)return`<span class="badge b-amber">${days}d left</span>`;return`<span class="badge b-green">${days}d</span>`;}
@@ -922,6 +963,121 @@ function acknowledgeReview(id){const r=S.reviews.find(x=>x.id===id);if(!r||r.emp
 async function notifyReviewShared(r){const e=S.employees.find(x=>x.id===r.emp)||{};if(!e.email){flash("Review shared (no employee email to notify)");return;}const ov=reviewOverall(r);const ok=await sendMail(e.email,"Your performance review ("+r.period+") is ready","Hello "+(e.name||"")+",\n\nYour "+r.type+" performance review for "+r.period+" has been shared in the CoreV | OxeFit portal.\n\nOverall rating: "+ov.toFixed(1)+"/5 ("+ratingLabel(ov)+").\n\nPlease open the Performance tab to review and acknowledge it.\n\nCoreV | OxeFit HR");flash(ok?"Review shared & employee emailed":"Review shared (email not sent)");}
 async function notifyPip(r){const e=S.employees.find(x=>x.id===r.emp)||{};await sendMail(APPROVER,"Performance Improvement Plan flagged \u2014 "+(e.name||""),"A Performance Improvement Plan has been flagged in the portal.\n\nEmployee: "+(e.name||"")+"\nPeriod: "+r.period+"\nOverall rating: "+reviewOverall(r).toFixed(1)+"/5\nReviewer: "+(r.reviewer||currentUser)+"\n\nPlease review per the handbook's structured improvement process.");}
 
+/* ---------- Offboarding (exit, clearance & final settlement) ---------- */
+const CLEARANCE=[
+ ["letter","Resignation / termination letter on file","Signed letter or notice received and filed"],
+ ["notice","Notice period served or formally waived","Per MOHRE contract & handbook"],
+ ["handover","Work handover completed","Pipeline, clients, files & responsibilities transferred"],
+ ["assets","Company property returned","Laptop, mobile, SIM, access/parking cards, keys, uniform"],
+ ["accounts","Email & system accounts deactivated","CoreV email, HubSpot, SharePoint, portal access"],
+ ["visa","Residence visa cancellation (GDRFA)","Initiated and confirmed"],
+ ["mohre","MOHRE labour contract / work permit cancellation","Cancellation papers signed"],
+ ["insurance","Medical insurance cancellation","Policy member removed from the group plan"],
+ ["iloe","ILOE subscription closed",""],
+ ["settlement","Final settlement calculated & paid (WPS)","Gratuity, leave payout & dues settled"],
+ ["noc","NOC / experience certificate issued",""]
+];
+function offFor(empId){return S.offboardings.find(o=>o.emp===empId);}
+function offProgress(o){const done=CLEARANCE.filter(c=>o.clr&&o.clr[c[0]]&&o.clr[c[0]].done).length;return{done,total:CLEARANCE.length,pct:Math.round(done/CLEARANCE.length*100)};}
+function offSettlement(e){const g=gratuity(e);const lvDays=annualBalance(e).balance;const lvPay=lvDays*(totalSalary(e)/22);return{g,lvDays,lvPay,total:g+lvPay};}
+
+function rOff(){
+  const cases=isHR()?S.offboardings:S.offboardings.filter(o=>o.emp===selfId());
+  let head="";
+  if(isHR()){
+    const open=S.offboardings.filter(o=>o.status!=="Completed").length;
+    const done=S.offboardings.filter(o=>o.status==="Completed").length;
+    const propOut=S.offboardings.filter(o=>o.status!=="Completed"&&S.assets.some(a=>a.emp===o.emp&&a.status!=="Returned")).length;
+    head=`<div class="grid cards" style="margin-bottom:6px">
+      <div class="card stat"><div class="k">Open cases</div><div class="v" style="color:${open?'var(--amber)':'var(--green)'}">${open}</div></div>
+      <div class="card stat"><div class="k">Completed</div><div class="v">${done}</div></div>
+      <div class="card stat"><div class="k">Property still out</div><div class="v" style="color:${propOut?'var(--red)':'var(--green)'}">${propOut}</div></div>
+    </div>`;
+  }
+  view.innerHTML=`<div class="sec-h"><h2>${isHR()?'Offboarding':'My offboarding'}</h2>${isHR()?`<button class="btn p" onclick="offForm()">+ Start offboarding</button>`:''}</div>
+   ${head}
+   <div class="tablewrap">${cases.length?`<table><thead><tr><th>Employee</th><th>Type</th><th>Last working day</th><th>Clearance</th><th>Status</th><th class="right"></th></tr></thead><tbody>
+   ${cases.slice().sort((a,b)=>(b._ts||0)-(a._ts||0)).map(o=>{const e=S.employees.find(x=>x.id===o.emp);const pr=offProgress(o);return `<tr>
+     <td class="emp-name">${e?e.name:'—'}</td><td><span class="badge ${o.type==='Termination'?'b-red':'b-grey'}">${o.type}</span></td>
+     <td class="mono">${o.lastDay?prettyD(o.lastDay):'—'}</td>
+     <td style="min-width:130px"><div class="prog"><i style="width:${pr.pct}%"></i></div><div class="hint">${pr.done}/${pr.total} done</div></td>
+     <td><span class="badge ${o.status==='Completed'?'b-green':'b-amber'}">${o.status}</span></td>
+     <td class="row-act"><button class="btn g sm" onclick="offView('${o.id}')">Open</button>${isHR()?`<button class="btn danger sm" onclick="delItem('offboardings','${o.id}','off')">✕</button>`:''}</td>
+   </tr>`}).join("")}
+   </tbody></table>`:`<div class="empty"><b>No offboarding cases ${isHR()?'':'for you'}</b>${isHR()?'Start one when an employee resigns or is terminated to track clearance and the final settlement.':''}</div>`}</div>`;
+}
+
+function offForm(id){
+  if(!isHR()){alert("Only HR can start offboarding.");return;}
+  const o=id?S.offboardings.find(x=>x.id===id):null;
+  const sel=(cur)=>S.employees.map(e=>`<option value="${e.id}" ${cur===e.id?'selected':''}>${e.name}</option>`).join("");
+  modal(id?"Edit offboarding":"Start offboarding",`<div class="fgrid">
+     <div><label>Employee *</label><select id="o_emp" ${id?'disabled':''}>${sel(o&&o.emp)}</select></div>
+     <div><label>Type *</label><select id="o_type">${["Resignation","Termination","Contract non-renewal","Mutual separation"].map(t=>`<option ${o&&o.type===t?'selected':''}>${t}</option>`).join("")}</select></div>
+     <div><label>Notice / letter date</label><input type="date" id="o_notice" value="${(o&&o.noticeDate)||''}"></div>
+     <div><label>Last working day *</label><input type="date" id="o_last" value="${(o&&o.lastDay)||''}"></div>
+     <div class="full"><label>Reason / notes</label><input id="o_reason" value="${(o&&o.reason)||''}" placeholder="e.g. resigned for relocation"></div>
+   </div><div class="hint">This creates a clearance checklist (visa, insurance, MOHRE, property return\u2026) and a final-settlement summary. Ahmed & the Office Manager are notified.</div>`,
+   [["Cancel","closeModal()","g"],[id?"Save":"Start offboarding","saveOff('"+(id||'')+"')","p"]]);
+}
+function saveOff(id){
+  const emp=$("#o_emp").value,lastDay=$("#o_last").value;
+  if(!emp||!lastDay){alert("Employee and last working day are required.");return;}
+  const prev=id?S.offboardings.find(x=>x.id===id):null;
+  if(!id&&offFor(emp)){alert("An offboarding case already exists for this employee.");return;}
+  const rec=Object.assign({id:id||uid(),emp,clr:{},status:"In progress"},prev||{},{
+    type:$("#o_type").value,noticeDate:$("#o_notice").value,lastDay,reason:$("#o_reason").value,emp,_ts:Date.now()});
+  if(id){const i=S.offboardings.findIndex(x=>x.id===id);S.offboardings[i]=rec;}else S.offboardings.push(rec);
+  // mark employee on notice
+  const ei=S.employees.findIndex(x=>x.id===emp);if(ei>=0&&S.employees[ei].status!=="Exited"){S.employees[ei]={...S.employees[ei],status:"Notice",_ts:Date.now()};}
+  dbSet();closeModal();setView("off");
+  if(!prev)notifyOffboard(rec);
+}
+function toggleClearance(id,key){
+  const o=S.offboardings.find(x=>x.id===id);if(!o)return;o.clr=o.clr||{};
+  const cur=o.clr[key]&&o.clr[key].done;
+  o.clr[key]=cur?{done:false}:{done:true,date:dateStr(today()),by:currentUser};
+  o._ts=Date.now();dbSet();offView(id);
+}
+function completeOffboard(id){
+  const o=S.offboardings.find(x=>x.id===id);if(!o)return;
+  const pr=offProgress(o);
+  if(pr.done<pr.total&&!confirm((pr.total-pr.done)+" clearance item(s) are still open. Mark offboarding complete anyway?"))return;
+  o.status="Completed";o.completedOn=dateStr(today());o._ts=Date.now();
+  const ei=S.employees.findIndex(x=>x.id===o.emp);if(ei>=0){S.employees[ei]={...S.employees[ei],status:"Exited",exitDate:o.lastDay,_ts:Date.now()};}
+  dbSet();closeModal();setView("off");flash("Offboarding completed \u2014 employee marked Exited");
+}
+function offView(id){
+  const o=S.offboardings.find(x=>x.id===id);if(!o)return;const e=S.employees.find(x=>x.id===o.emp)||{};
+  const set=offSettlement(e);const pr=offProgress(o);
+  const assets=S.assets.filter(a=>a.emp===o.emp);const outAssets=assets.filter(a=>a.status!=="Returned");
+  const items=CLEARANCE.map(c=>{const st=o.clr&&o.clr[c[0]];const done=st&&st.done;
+    const extra=c[0]==="assets"&&assets.length?`<div class="sub">${outAssets.length?('Outstanding: '+outAssets.map(a=>a.type).join(", ")):'All '+assets.length+' item(s) returned'}</div>`:'';
+    return `<div class="clr-item ${done?'done':''}"><div class="clr-cb" onclick="toggleClearance('${id}','${c[0]}')">${done?'\u2713':''}</div><div class="clr-tx"><b>${c[1]}</b><div class="sub">${c[2]||''}${done&&st.by?(' \u00b7 by '+st.by+' on '+prettyD(st.date)):''}</div>${extra}</div></div>`;}).join("");
+  const assetRows=assets.length?assets.map(a=>`<div class="flex" style="justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span>${a.type} <span class="muted mono">${a.tag||''}</span></span><span>${a.status==="Returned"?'<span class="badge b-green">Returned</span>':`<button class="btn g sm" onclick="returnAssetFrom('${a.id}','${id}')">Mark returned</button>`}</span></div>`).join(""):'<span class="muted">No assets assigned.</span>';
+  modal(`Offboarding \u2014 ${e.name||''}`,`
+   <div class="flex" style="justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+     <div><span class="badge ${o.type==='Termination'?'b-red':'b-grey'}">${o.type}</span> <span class="badge ${o.status==='Completed'?'b-green':'b-amber'}">${o.status}</span><div class="muted" style="margin-top:4px">Last working day: <b>${o.lastDay?prettyD(o.lastDay):'\u2014'}</b>${o.noticeDate?' · notice '+prettyD(o.noticeDate):''}</div></div>
+     <div style="text-align:right"><div class="muted">Clearance</div><div style="font-family:Montserrat;font-weight:700;font-size:18px">${pr.pct}%</div></div>
+   </div>
+   <div class="prog" style="margin-bottom:14px"><i style="width:${pr.pct}%"></i></div>
+   <div class="card" style="background:#FBFAF6;margin-bottom:14px">
+     <label>Final settlement estimate</label>
+     <div class="flex" style="justify-content:space-between;margin-top:6px"><span class="muted">Gratuity (${fmt1(yearsOfService(e))} yrs${e.misconduct?' · forfeited (misconduct)':''})</span><b class="mono">AED ${aed(set.g)}</b></div>
+     <div class="flex" style="justify-content:space-between"><span class="muted">Leave payout (${fmt1(set.lvDays)} working days \u00d7 salary/22)</span><b class="mono">AED ${aed(set.lvPay)}</b></div>
+     <div class="flex" style="justify-content:space-between;border-top:1px solid var(--line);margin-top:6px;padding-top:6px"><b>Estimated total</b><b class="mono" style="color:var(--teal)">AED ${aed(set.total)}</b></div>
+     <div class="hint">Indicative only \u2014 confirm against MOHRE rules, notice adjustments and any deductions. Full breakdown in End of Service.</div>
+   </div>
+   <label>Company property return</label><div style="margin:6px 0 14px">${assetRows}</div>
+   <label>Clearance checklist</label><div style="margin-top:8px">${items}</div>
+  `,
+  isHR()?[["Mark complete",`completeOffboard('${id}')`,"p"],["Edit",`offForm('${id}')`,"g"],["Close","closeModal()","g"]]:[["Close","closeModal()","p"]]);
+}
+function returnAssetFrom(assetId,offId){const a=S.assets.find(x=>x.id===assetId);if(!a)return;a.status="Returned";a.returned=dateStr(today());a._ts=Date.now();
+  const o=S.offboardings.find(x=>x.id===offId);if(o){const out=S.assets.filter(x=>x.emp===o.emp&&x.status!=="Returned");if(!out.length){o.clr=o.clr||{};o.clr.assets={done:true,date:dateStr(today()),by:currentUser};o._ts=Date.now();}}
+  dbSet();offView(offId);}
+async function notifyOffboard(o){const e=S.employees.find(x=>x.id===o.emp)||{};await sendMail([APPROVER,"gladys@core-velocity.com"],"Offboarding started \u2014 "+(e.name||""),"An offboarding case has been opened in the CoreV | OxeFit portal.\n\nEmployee: "+(e.name||"")+"\nType: "+o.type+"\nLast working day: "+(o.lastDay?prettyD(o.lastDay):"")+"\nReason: "+(o.reason||"")+"\n\nPlease action visa cancellation, insurance removal, MOHRE cancellation and property return via the Offboarding tab.");flash("Offboarding started \u2014 Ahmed & Office Manager notified");}
+
 /* ---------- Organization chart ---------- */
 const SALES_FUNCS=["B2B Sales Lead MGMT Per Sector","Growth Sales Pipeline & Forecasting","Building Business Use-Cases per Sector","Engaging in Demos, Events & Awareness","Customer Networking & Relationship"];
 const ORG=[
@@ -1067,7 +1223,7 @@ $("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeModal();}
 
 /* ---------- roles / identity UI ---------- */
 function updateWho(){const w=$("#whoami");if(w)w.textContent=currentUser?(currentUser+" · "+(role==="admin"?"Admin":role==="full"?"Full access":"Employee")):"";}
-function applyRoleUI(){const q=v=>document.querySelector('[data-v="'+v+'"]');const set=q("settings"),eos=q("eos"),sal=q("salary"),dc=q("docs");if(set)set.style.display=isAdmin()?"":"none";if(sal)sal.style.display=isAdmin()?"":"none";if(eos)eos.style.display=isHR()?"":"none";if(dc)dc.style.display=isHR()?"":"none";updateWho();}
+function applyRoleUI(){const q=v=>document.querySelector('[data-v="'+v+'"]');const set=q("settings"),eos=q("eos"),sal=q("salary"),dc=q("docs");if(set)set.style.display=isAdmin()?"":"none";if(sal)sal.style.display=isAdmin()?"":"none";if(eos)eos.style.display=isHR()?"":"none";if(dc)dc.style.display=isHR()?"":"none";document.querySelectorAll(".navgroup").forEach(g=>{const vis=[...g.querySelectorAll(".nav")].some(n=>n.style.display!=="none");g.style.display=vis?"":"none";});syncNavGroups();updateWho();}
 function updateBadges(){const p=S.letters.filter(l=>l.status!=="Issued"&&l.status!=="Rejected").length;const b=$("#navLetters");if(b){if(p){b.style.display="";b.textContent=p;}else b.style.display="none";}}
 
 /* ---------- seed ---------- */
@@ -1157,7 +1313,7 @@ async function getAccessToken(){
 }
 let _fileRef=null,_accessError=false;
 const _fileName=(ONEDRIVE_CONFIG.filePath.split("/").pop()||"corev-hr.json").toLowerCase();
-const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews"];
+const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings"];
 function driveRootUrl(){const upn=ONEDRIVE_CONFIG.sharedDriveUser;
   if(upn)return `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;
   return `https://graph.microsoft.com/v1.0/me/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;}
@@ -1273,6 +1429,7 @@ async function boot(){
   if(!S.settings||!S.settings.companyName)S.settings={companyName:"CoreV | OxeFit",tradeLicense:"",address:"Dubai, United Arab Emirates",phone:"",signatory:"",signatoryTitle:"HR Manager",carryCap:23,dailyHours:8,toilMult:3,weekdayMult:2,logo:""};
   applyLogo();
   document.querySelectorAll(".nav").forEach(n=>n.addEventListener("click",()=>{setView(n.dataset.v);if(n.dataset.v==="leave")setTimeout(remindCerts,150);}));
+  document.querySelectorAll(".navhead").forEach(h=>h.addEventListener("click",()=>h.parentNode.classList.toggle("open")));
   if(!ONEDRIVE_CONFIG.clientId){const su=$("#loginSetup");if(su){su.style.display="block";su.innerHTML="<b>Setup:</b> set <code>ONEDRIVE_CONFIG.clientId</code> (your Azure app) to enable Microsoft sign-in and OneDrive sync.";}}
   let acct=null;try{acct=await initMsal();}catch(_){}
   if(acct){authorize(acct);}else{setSync("offline","Sign in");}
