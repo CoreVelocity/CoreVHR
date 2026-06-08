@@ -136,6 +136,15 @@ tbody tr:hover{background:#FCFBF7}
 .kpi-line .kn{flex:0 0 200px}.kpi-line .kb{flex:1;height:8px;border-radius:6px;background:#EFEBE2;overflow:hidden}.kpi-line .kb i{display:block;height:100%}
 .starsel{display:flex;gap:4px}.starsel button{border:1px solid var(--line);background:var(--card);border-radius:7px;width:30px;height:30px;cursor:pointer;font-weight:600}
 .starsel button.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.org-wrap{display:flex;gap:16px;overflow-x:auto;padding-bottom:10px;align-items:flex-start}
+.org-col{flex:1 1 0;min-width:236px}
+.org-partner{background:#4A66B5;color:#fff;border-radius:13px;padding:14px;text-align:center;font-family:"Montserrat",sans-serif;font-weight:700;box-shadow:0 4px 14px rgba(36,49,119,.18)}
+.org-partner small{display:block;font-weight:500;opacity:.92;font-size:12px;margin-top:2px}
+.org-group{margin-top:18px;position:relative}
+.org-gh{background:#0E1A40;color:#fff;border-radius:10px;padding:11px;text-align:center;font-weight:700;font-family:"Montserrat",sans-serif;font-size:13px}
+.org-person{background:#5B79CB;color:#fff;border-radius:10px;padding:9px 12px;margin-top:8px;text-align:center;font-weight:600;font-size:13.5px}
+.org-person small{display:block;font-weight:400;opacity:.92;font-size:11.5px}
+.org-func{background:#234B73;color:#fff;border-radius:8px;padding:7px 10px;margin-top:6px;font-size:11.5px;text-align:center;line-height:1.35}
 #brandLogo{max-height:54px;max-width:190px;width:auto;height:auto;object-fit:contain;margin:2px 4px 14px;display:none}
 .app{display:none}.app.ready{display:grid}
 </style>
@@ -163,6 +172,7 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="toil">‣ Overtime / TOIL</div>
     <div class="nav" data-v="iloe">‣ ILOE</div>
     <div class="nav" data-v="perf">‣ Performance</div>
+    <div class="nav" data-v="org">‣ Organization</div>
     <div class="nav" data-v="handbook">‣ Company Handbook</div>
     <div class="nav" data-v="letters">‣ Letters <small id="navLetters" style="display:none"></small></div>
     <div class="nav" data-v="assets">‣ Assets</div>
@@ -170,7 +180,7 @@ tbody tr:hover{background:#FCFBF7}
     <div class="nav" data-v="docs">‣ Documents</div>
     <div class="nav" data-v="eos">‣ End of Service</div>
     <div class="nav" data-v="settings">‣ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v2.6<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v2.7<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -317,7 +327,7 @@ const view=$("#view");
 const titles={dash:["Dashboard","Live view of the team"],emp:["Employees","Master records, compensation & compliance"],
   leave:["Leave","Annual & sick leave balances"],toil:["Overtime / TOIL","Overtime in lieu — weekday 2× / weekend 3×"],
   letters:["Letters","NOC, salary certificate & employment letters"],assets:["Assets","Company deliverables per employee"],
-  eos:["End of Service","Gratuity & final settlement (MOHRE)"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],perf:["Performance","Reviews, appraisals & KPI scorecards"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"]};
+  eos:["End of Service","Gratuity & final settlement (MOHRE)"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],perf:["Performance","Reviews, appraisals & KPI scorecards"],org:["Organization","How CoreV | OxeFit operates today"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"]};
 let cur="dash";
 
 function isHR(){return role==="admin"||role==="full";}
@@ -327,7 +337,7 @@ function visibleEmps(){return isHR()?S.employees:S.employees.filter(e=>e.id===se
 
 function setView(v){cur=v;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("on",n.dataset.v===v));
   $("#vTitle").textContent=titles[v][0]; $("#vSub").textContent= v==="toil"? ("Overtime in lieu — weekday "+(S.settings.weekdayMult||2)+"× / weekend "+(S.settings.toilMult||3)+"×") : titles[v][1];
-  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,iloe:rIloe,perf:rPerf,handbook:rHandbook,salary:rSalary,docs:rDocs,settings:rSettings})[v]();}
+  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,iloe:rIloe,perf:rPerf,org:rOrg,handbook:rHandbook,salary:rSalary,docs:rDocs,settings:rSettings})[v]();}
 
 function statusBadge(e){const m={Active:"b-green",Probation:"b-amber",Notice:"b-amber",Exited:"b-grey"};return `<span class="badge ${m[e.status]||'b-grey'}"><span class="dot" style="background:currentColor"></span>${e.status}</span>`;}
 function expBadge(days){if(days<0)return`<span class="badge b-red">Expired ${-days}d</span>`;if(days<=30)return`<span class="badge b-red">${days}d left</span>`;if(days<=60)return`<span class="badge b-amber">${days}d left</span>`;return`<span class="badge b-green">${days}d</span>`;}
@@ -778,6 +788,32 @@ const KPI_TEMPLATES={
  "Sales Manager (weekly)":[["New opportunities",2],["Demos",2],["Win rate %",25],["Pipeline vs target (x)",4],["Calls",150]],
  "General / role-based":[["Objective 1",100],["Objective 2",100],["Objective 3",100]]
 };
+const MANAGER_MAP={
+ wafiq:{name:"Kamal Shanableh",email:"kamal@core-velocity.com"},
+ hussean:{name:"Kamal Shanableh",email:"kamal@core-velocity.com"},
+ jawdat:{name:"Kamal Shanableh",email:"kamal@core-velocity.com"},
+ fatima:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
+ marios:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
+ connor:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
+ gladys:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
+ charlie:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
+ prem:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
+ katy:{name:"Sami Idbeis",email:"sami@core-velocity.com"},
+ milene:{name:"Sami Idbeis",email:"sami@core-velocity.com"},
+ hasan:{name:"Sami Idbeis",email:"sami@core-velocity.com"}
+};
+function managerFor(emp){if(!emp)return null;const n=(emp.name||"").trim().toLowerCase().split(/\s+/)[0];return MANAGER_MAP[n]||null;}
+function perfGuidelines(){
+ const tpl=Object.entries(KPI_TEMPLATES).filter(([k])=>k!=="General / role-based").map(([role,rows])=>`<div style="margin:7px 0"><b>${role}</b><div class="muted" style="font-size:12px">${rows.map(r=>r[0]+": "+r[1]).join("  \u00b7  ")}</div></div>`).join("");
+ const scale=[["5","Outstanding"],["4","Exceeds"],["3","Meets"],["2","Needs improvement"],["1","Unsatisfactory"]].map(x=>`<span class="tag" style="margin:2px 4px 2px 0">${x[0]} \u00b7 ${x[1]}</span>`).join(" ");
+ return `<div class="hb-sec"><div class="hb-h" onclick="this.parentNode.classList.toggle('open')"><span>\u2139 KPI guidelines & rating scale \u2014 direction for team & managers</span><span class="hb-chev">\u203a</span></div><div class="hb-body">
+  <h4>Rating scale (per competency, 1\u20135)</h4><div>${scale}</div>
+  <h4>Competencies assessed every review</h4><ul>${RATE_KEYS.map(k=>`<li><b>${k[1]}</b></li>`).join("")}</ul>
+  <h4>Weekly KPI targets by role (from the handbook \u00a77)</h4>${tpl}
+  <div class="flag">Managers enter actuals against these targets each period; the attainment bars show progress. Sustained underperformance should follow the handbook\u2019s structured improvement process (flag a PIP on the review).</div>
+ </div></div>`;
+}
+function reviewEmpChange(){const e=S.employees.find(x=>x.id===($("#rv_emp")&&$("#rv_emp").value));const m=managerFor(e||{});if(m&&$("#rv_reviewer"))$("#rv_reviewer").value=m.name;}
 function reviewOverall(rv){const r=rv.r||{};const vals=RATE_KEYS.map(k=>+r[k[0]]||0).filter(v=>v>0);return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;}
 function ratingLabel(x){return x>=4.5?"Outstanding":x>=3.5?"Exceeds expectations":x>=2.5?"Meets expectations":x>=1.5?"Needs improvement":x>0?"Unsatisfactory":"Not rated";}
 function ratingColor(x){return x>=4.5?"#2E7D52":x>=3.5?"var(--teal)":x>=2.5?"#9A7B27":x>0?"var(--red)":"var(--ink-soft)";}
@@ -803,6 +839,7 @@ function rPerf(){
     </div>`;
   }
   view.innerHTML=`<div class="sec-h"><h2>${isHR()?'Performance reviews':'My reviews'}</h2>${isHR()?`<button class="btn p" onclick="reviewForm()">+ New review</button>`:''}</div>
+   ${perfGuidelines()}
    ${head}
    <div class="tablewrap">${mine.length?`<table><thead><tr><th>Employee</th><th>Period</th><th>Type</th><th>Overall</th><th>Status</th><th class="right"></th></tr></thead><tbody>
    ${mine.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(r=>{const e=S.employees.find(x=>x.id===r.emp);const ov=reviewOverall(r);return `<tr>
@@ -840,10 +877,13 @@ function reviewForm(id){
   const r=id?S.reviews.find(x=>x.id===id):null;
   const sel=(cur)=>S.employees.map(e=>`<option value="${e.id}" ${cur===e.id?'selected':''}>${e.name}</option>`).join("");
   const rr=(r&&r.r)||{};
+  const _fe=r?S.employees.find(e=>e.id===r.emp):S.employees[0];
+  const defRev=(r&&r.reviewer)||((managerFor(_fe)||{}).name)||currentUser;
   const ratingCtrl=RATE_KEYS.map(k=>`<div style="margin:8px 0"><label>${k[1]}</label><div class="starsel" id="ss_${k[0]}">${[1,2,3,4,5].map(n=>`<button type="button" class="${(+rr[k[0]]||0)>=n?'on':''}" onclick="setStar('${k[0]}',${n})">${n}</button>`).join("")}</div></div>`).join("");
   modal(id?"Edit review":"New performance review",`
    <div class="fgrid">
-     <div><label>Employee *</label><select id="rv_emp">${sel(r&&r.emp)}</select></div>
+     <div><label>Employee *</label><select id="rv_emp" onchange="reviewEmpChange()">${sel(r&&r.emp)}</select></div>
+     <div><label>Manager / reviewer</label><input id="rv_reviewer" value="${defRev}"></div>
      <div><label>Period *</label><input id="rv_period" value="${(r&&r.period)||''}" placeholder="e.g. Q2 2026 / Annual 2025"></div>
      <div><label>Type</label><select id="rv_type">${["Quarterly","Half-year","Annual","Probation"].map(t=>`<option ${r&&r.type===t?'selected':''}>${t}</option>`).join("")}</select></div>
      <div><label>Status</label><select id="rv_status">${["Draft","Shared"].map(t=>`<option ${r&&r.status===t?'selected':''}>${t}</option>`).join("")}</select></div>
@@ -872,7 +912,7 @@ function saveReview(){
   const wasShared=prev&&prev.status==="Shared";
   const rec={id:id||uid(),emp,period,type:$("#rv_type").value,status:$("#rv_status").value,tpl:$("#rv_tpl").value,
     r:Object.assign({},_starDraft),kpis,comments:$("#rv_comments").value,goals:$("#rv_goals").value,pip:$("#rv_pip").checked,
-    reviewer:(prev&&prev.reviewer)||currentUser,date:(prev&&prev.date)||dateStr(today()),ack:(prev&&prev.ack)||false,_ts:Date.now()};
+    reviewer:($("#rv_reviewer")&&$("#rv_reviewer").value.trim())||(prev&&prev.reviewer)||currentUser,date:(prev&&prev.date)||dateStr(today()),ack:(prev&&prev.ack)||false,_ts:Date.now()};
   if(id){const i=S.reviews.findIndex(x=>x.id===id);S.reviews[i]=rec;}else S.reviews.push(rec);
   dbSet();closeModal();setView("perf");
   if(rec.status==="Shared"&&!wasShared)notifyReviewShared(rec);
@@ -881,6 +921,33 @@ function saveReview(){
 function acknowledgeReview(id){const r=S.reviews.find(x=>x.id===id);if(!r||r.emp!==selfId())return;r.ack=true;r.status="Acknowledged";r._ts=Date.now();dbSet();closeModal();setView("perf");flash("Review acknowledged");}
 async function notifyReviewShared(r){const e=S.employees.find(x=>x.id===r.emp)||{};if(!e.email){flash("Review shared (no employee email to notify)");return;}const ov=reviewOverall(r);const ok=await sendMail(e.email,"Your performance review ("+r.period+") is ready","Hello "+(e.name||"")+",\n\nYour "+r.type+" performance review for "+r.period+" has been shared in the CoreV | OxeFit portal.\n\nOverall rating: "+ov.toFixed(1)+"/5 ("+ratingLabel(ov)+").\n\nPlease open the Performance tab to review and acknowledge it.\n\nCoreV | OxeFit HR");flash(ok?"Review shared & employee emailed":"Review shared (email not sent)");}
 async function notifyPip(r){const e=S.employees.find(x=>x.id===r.emp)||{};await sendMail(APPROVER,"Performance Improvement Plan flagged \u2014 "+(e.name||""),"A Performance Improvement Plan has been flagged in the portal.\n\nEmployee: "+(e.name||"")+"\nPeriod: "+r.period+"\nOverall rating: "+reviewOverall(r).toFixed(1)+"/5\nReviewer: "+(r.reviewer||currentUser)+"\n\nPlease review per the handbook's structured improvement process.");}
+
+/* ---------- Organization chart ---------- */
+const SALES_FUNCS=["B2B Sales Lead MGMT Per Sector","Growth Sales Pipeline & Forecasting","Building Business Use-Cases per Sector","Engaging in Demos, Events & Awareness","Customer Networking & Relationship"];
+const ORG=[
+ {partner:"Kamal Shanableh",title:"Managing Partner",groups:[
+   {name:"Southern UAE Sales",people:[{n:"Wafiq",r:"Sales"},{n:"Jawdat",r:"Sales"},{n:"Connor",r:"Business Development"},{n:"Hussean",r:"Sales"}],funcs:SALES_FUNCS}
+ ]},
+ {partner:"Sami Idbeis",title:"Managing Partner",groups:[
+   {name:"Northern UAE Sales",people:[{n:"Fatima",r:"Business Development"},{n:"Hasan",r:"Sales"},{n:"Marios",r:"Business Development"},{n:"Katy",r:"Sales"},{n:"Milene",r:"Sales"}],funcs:SALES_FUNCS}
+ ]},
+ {partner:"Ahmed Abuhakmeh",title:"Managing Partner",groups:[
+   {name:"B2C Sales & Demo",people:[{n:"Fatima",r:"ISR"},{n:"Marios",r:"ISR"},{n:"Connor",r:"ISR"}],funcs:["B2C & Online MGMT","Customer Query / Questions","Remote & Physical Demos (B2C/B2B)","Post-Sales Training for B2B/B2C","Quotations Creation"]},
+   {name:"Administration",people:[{n:"Gladys",r:"Office Manager"}],funcs:["PRO","Office Logistics","Accounting","HR","Marketing","Reporting","Client DB","Post-Sales Customer Care"]},
+   {name:"Delivery & Post-Sales Services",people:[{n:"Charlie",r:"Technician"},{n:"Prem",r:"Technician"}],funcs:["Warehouse MGMT","Delivery & Logistics","Spare MGMT","Warranty Tracking","Maintenance & Repair","Support"]}
+ ]}
+];
+function rOrg(){
+ view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">How <b>CoreV | OxeFit</b> operates today \u2014 three Managing Partners over the two sales regions and the B2C / Administration / Delivery functions. People-management lines feed the Performance tab, so reviews route to the right partner (Kamal \u2192 Wafiq, Jawdat, Hussean; Sami \u2192 Hasan, Katy, Milene; Ahmed \u2192 Fatima, Marios, Connor, Gladys, Charlie, Prem).</div>
+ <div class="org-wrap">${ORG.map(col=>`<div class="org-col">
+   <div class="org-partner">${col.partner}<small>${col.title}</small></div>
+   ${col.groups.map(g=>`<div class="org-group"><div class="org-gh">${g.name}</div>
+     ${g.people.map(pp=>`<div class="org-person">${pp.n}<small>${pp.r}</small></div>`).join("")}
+     ${(g.funcs||[]).map(f=>`<div class="org-func">${f}</div>`).join("")}
+   </div>`).join("")}
+ </div>`).join("")}</div>
+ <div class="hint" style="margin-top:10px">Note: Fatima, Marios and Connor appear in both their sales region and the B2C / Demo team (dual role), as in the company chart.</div>`;
+}
 
 /* ---------- Company Handbook (reference) ---------- */
 const HANDBOOK=[
