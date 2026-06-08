@@ -227,7 +227,7 @@ tbody tr:hover{background:#FCFBF7}
     </div>
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v3.2<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.3<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -439,8 +439,34 @@ function rDash(){
       ${onLeave.map(l=>{const e=S.employees.find(e=>e.id===l.emp);return`<tr><td class="emp-name">${e?e.name:'—'}</td><td><span class="badge b-teal">${l.type}</span></td><td class="mono">${prettyD(l.start)}</td><td class="mono">${prettyD(l.end)}</td></tr>`}).join("")}
       </tbody></table>`:`<div class="empty">Nobody is on leave today.</div>`}</div>
    ${(()=>{const unpaid=S.leaves.filter(l=>l.status!=="Rejected"&&(l.type==="Unpaid"||(l.type==="Emergency"&&!l.paid))).filter(l=>isHR()||l.emp===selfId());return unpaid.length?`<div class="sec-h"><h2>Unpaid leave \u2014 flagged</h2></div><div class="tablewrap"><table><thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Status</th></tr></thead><tbody>${unpaid.map(l=>{const e=S.employees.find(e=>e.id===l.emp);return`<tr><td class="emp-name">${e?e.name:'—'}</td><td><span class="badge b-grey">${l.type==="Emergency"?"Emergency (unpaid)":"Unpaid"}</span></td><td class="mono">${prettyD(l.start)}</td><td class="mono">${prettyD(l.end)}</td><td><span class="badge ${l.status==='Approved'?'b-green':l.status==='Rejected'?'b-red':'b-amber'}">${l.status}</span></td></tr>`}).join("")}</tbody></table></div>`:'';})()}
+   ${(()=>{ if(!isHR())return ''; const tod=birthdaysToday(); const up=upcomingBirthdays(7); if(!tod.length&&!up.length)return '';
+     const rowsT=tod.map(e=>`<tr><td class="emp-name">\ud83c\udf82 ${e.name}</td><td>${e.designation||''}</td><td><span class="badge b-teal">Today${ageOf(e)!=null?' \u00b7 turning '+ageOf(e):''}</span></td></tr>`).join("");
+     const rowsU=up.map(o=>`<tr><td class="emp-name">${o.e.name}</td><td>${o.e.designation||''}</td><td class="mono">${prettyD(dateStr(o.d))} \u00b7 in ${o.in}d</td></tr>`).join("");
+     return `<div class="sec-h"><h2>Birthdays</h2></div><div class="tablewrap"><table><thead><tr><th>Employee</th><th>Role</th><th>When</th></tr></thead><tbody>${rowsT}${rowsU}</tbody></table></div>`;})()}
    ${(()=>{const oc=myOutstandingCerts();return oc.length?`<div class="sec-h"><h2>Medical reports outstanding</h2></div><div class="tablewrap"><table><thead><tr><th>Employee</th><th>Sick leave</th><th>Status</th><th class="right"></th></tr></thead><tbody>${oc.map(l=>{const e=S.employees.find(e=>e.id===l.emp);const d=certDue(l);return`<tr><td class="emp-name">${e?e.name:'—'}</td><td class="mono">${prettyD(l.start)}\u2013${prettyD(l.end)}</td><td><span class="badge ${d>5?'b-red':'b-amber'}">${d>5?'Overdue '+d+'d':'Due ('+Math.max(0,d)+'d)'}</span></td><td class="right">${(isHR()||l.emp===selfId())?`<button class="btn g sm" onclick="markCert('${l.id}')">Report ✓</button>`:''}</td></tr>`}).join("")}</tbody></table></div>`:'';})()}`;
 }
+
+/* ---------- Birthdays ---------- */
+function bdayMatch(e,d){if(!e.dob)return false;const b=D(e.dob);return !!b&&b.getMonth()===d.getMonth()&&b.getDate()===d.getDate();}
+function ageOf(e){if(!e.dob)return null;const b=D(e.dob),t=today();let a=t.getFullYear()-b.getFullYear();if(t.getMonth()<b.getMonth()||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate()))a--;return a>=0&&a<120?a:null;}
+function birthdaysToday(){return S.employees.filter(e=>e.status!=="Exited"&&bdayMatch(e,today()));}
+function upcomingBirthdays(days){const out=[],t=today();for(let i=1;i<=days;i++){const d=new Date(t);d.setDate(t.getDate()+i);S.employees.forEach(e=>{if(e.status!=="Exited"&&bdayMatch(e,d))out.push({e,d:new Date(d),in:i});});}return out;}
+const ADMIN_EMAILS=["ahmed@core-velocity.com","sami@core-velocity.com","kamal@core-velocity.com","gladys@core-velocity.com"];
+async function notifyBirthdays(list){
+  if(!list||!list.length)return;
+  const key="bdayNotified_"+dateStr(today());
+  try{if(localStorage.getItem(key))return;}catch(_){}
+  const names=list.map(e=>e.name+(ageOf(e)!=null?(" (turning "+ageOf(e)+")"):"")).join(", ");
+  const ok=await sendMail(ADMIN_EMAILS,"\ud83c\udf82 Birthday today \u2014 "+list.map(e=>e.name).join(", "),"Today is the birthday of: "+names+".\n\nPlease arrange a celebration and share the team\u2019s wishes.\n\nCoreV | OxeFit HR portal");
+  try{if(ok)localStorage.setItem(key,"1");}catch(_){}
+}
+function remindBirthdays(){
+  const list=birthdaysToday();if(!list.length)return;
+  if(document.querySelector("#scrim.show"))return;
+  const rows=list.map(e=>`<div class="card" style="margin-bottom:8px;background:var(--teal-wash);border-color:#C3C9EC"><div class="flex" style="justify-content:space-between;align-items:center"><div><b>\ud83c\udf82 ${e.name}</b>${ageOf(e)!=null?` <span class="tag">turning ${ageOf(e)}</span>`:''}<div class="emp-sub muted">${e.designation||''}${e.department?' \u00b7 '+e.department:''}</div></div>${e.email?`<button class="btn g sm" onclick="wishEmployee('${e.id}')">Send wishes</button>`:''}</div></div>`).join("");
+  modal("\ud83c\udf89 Birthday today","<p style=\"margin-bottom:12px\">Please arrange a celebration for:</p>"+rows,[["Noted","closeModal()","p"]]);
+}
+async function wishEmployee(id){const e=S.employees.find(x=>x.id===id);if(!e||!e.email){flash("No work email on file");return;}const ok=await sendMail(e.email,"Happy Birthday, "+e.name+"! \ud83c\udf82","Dear "+e.name+",\n\nWishing you a very happy birthday and a wonderful year ahead!\n\nWarm wishes,\nThe CoreV | OxeFit team");flash(ok?("Birthday wishes sent to "+e.name):"Could not send (sign in / check email)");}
 
 /* ---------- Employees ---------- */
 function rEmp(){
@@ -469,6 +495,7 @@ function empView(id){
      <div><label>Joined</label>${prettyD(e.start)} · ${fmt1(yearsOfService(e))} yrs</div>
      <div><label>Visa type</label>${e.visaType||'—'}</div>
      <div><label>Nationality</label>${e.nationality||'—'}</div>
+     <div><label>Date of birth</label>${e.dob?(prettyD(e.dob)+(ageOf(e)!=null?' · '+ageOf(e)+' yrs':'')):'—'}</div>
    </div>
    ${isHR()?`<div class="card" style="margin-top:14px;background:#FBFAF6"><label>Compensation</label>
      <div class="flex" style="justify-content:space-between"><span class="muted">Basic</span><b class="mono">${aed(e.basic)}</b></div>
@@ -498,6 +525,7 @@ function empForm(id){
      <div><label>Department</label><input id="f_department" value="${f('department')}"></div>
      <div><label>Status</label><select id="f_status">${["Active","Probation","Notice","Exited"].map(s=>`<option ${f('status','Active')===s?'selected':''}>${s}</option>`).join("")}</select></div>
      <div><label>Nationality</label><input id="f_nationality" value="${f('nationality')}"></div>
+     <div><label>Date of birth</label><input type="date" id="f_dob" value="${f('dob')}"></div>
      <div><label>Work email</label><input id="f_email" value="${f('email')}"></div>
      <div><label>Start date *</label><input type="date" id="f_start" value="${f('start')}"></div>
      <div><label>Probation end</label><input type="date" id="f_probationEnd" value="${f('probationEnd')}"></div>
@@ -524,7 +552,7 @@ function saveEmp(id){
   const g=k=>$("#f_"+k);
   if(!g("name").value||!g("start").value){alert("Name and start date are required.");return;}
   const obj={id:id||uid()};
-  ["name","empId","designation","department","status","nationality","email","start","probationEnd","endDate","visaType","passportNo","visaExpiry","eidExpiry","passportExpiry","insExpiry"].forEach(k=>obj[k]=g(k).value);
+  ["name","empId","designation","department","status","nationality","dob","email","start","probationEnd","endDate","visaType","passportNo","visaExpiry","eidExpiry","passportExpiry","insExpiry"].forEach(k=>obj[k]=g(k).value);
   ["basic","housing","transport","other","visaCost","insCost"].forEach(k=>obj[k]=+g(k).value||0);
   obj.ticket=g("ticket").checked;obj.misconduct=g("misconduct").checked;
   obj._ts=Date.now();if(id){const i=S.employees.findIndex(e=>e.id===id);S.employees[i]={...S.employees[i],...obj};}else S.employees.push(obj);
@@ -1337,7 +1365,7 @@ function authorize(account){
   $("#loginScreen").style.display="none";
   $("#appRoot").classList.add("ready");
   applyLogo();applyRoleUI();updateBadges();setView("dash");
-  downloadFromOneDrive().then(()=>{applyLogo();applyRoleUI();updateBadges();renderCurrent();setTimeout(remindCerts,600);
+  downloadFromOneDrive().then(()=>{applyLogo();applyRoleUI();updateBadges();renderCurrent();setTimeout(remindCerts,600);if(isHR())setTimeout(remindBirthdays,950);if(isAdmin())notifyBirthdays(birthdaysToday());
     if(!_pollStarted){_pollStarted=true;startPolling();}});
 }
 async function signOut(){
