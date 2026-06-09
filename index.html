@@ -234,7 +234,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.12<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.13<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -809,13 +809,13 @@ function rSettings(){
    <div class="flex" style="gap:18px;align-items:flex-start;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
      <img id="sigPreview" src="${c.signatureImg||''}" alt="" style="max-height:50px;max-width:170px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff;${c.signatureImg?'':'display:none'}">
      <div style="flex:1"><label>Authorised e-signature</label><input type="file" id="sigFile" accept="image/png,image/jpeg,image/webp" onchange="onSigPick(event)">
-     <div class="hint">PNG with transparent background works best (~400&nbsp;KB). Applied automatically to <b>Issued</b> letters.</div>
+     <div class="hint">PNG with transparent background works best (up to ~900&nbsp;KB). Applied automatically to <b>Issued</b> letters.</div>
      ${c.signatureImg?`<button class="btn g sm" style="margin-top:8px" onclick="clearSig()">Remove signature</button>`:''}</div>
    </div>
    <div class="flex" style="gap:18px;align-items:flex-start;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
      <img id="stampPreview" src="${c.stampImg||''}" alt="" style="max-height:60px;max-width:170px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff;${c.stampImg?'':'display:none'}">
      <div style="flex:1"><label>Company stamp / seal</label><input type="file" id="stampFile" accept="image/png,image/jpeg,image/webp" onchange="onStampPick(event)">
-     <div class="hint">PNG with transparent background (~400&nbsp;KB). Stamped on Issued letters.</div>
+     <div class="hint">PNG with transparent background (up to ~900&nbsp;KB). Stamped on Issued letters.</div>
      ${c.stampImg?`<button class="btn g sm" style="margin-top:8px" onclick="clearStamp()">Remove stamp</button>`:''}</div>
    </div></div>
    <div class="sec-h"><h2>Medical insurance</h2></div>
@@ -1554,7 +1554,7 @@ function onLogoPick(ev){const f=ev.target.files&&ev.target.files[0];if(!f)return
   if(f.size>400000){alert("Please use a logo under ~400 KB.");return;}
   const r=new FileReader();r.onload=()=>{S.settings.logo=r.result;dbSet();applyLogo();setView("settings");flash("Logo updated");};r.readAsDataURL(f);}
 function clearLogo(){S.settings.logo="";dbSet();applyLogo();setView("settings");}
-function _imgPick(ev,key,label){const f=ev.target.files&&ev.target.files[0];if(!f)return;if(f.size>500000){alert("Please use an image under ~500 KB.");return;}const r=new FileReader();r.onload=()=>{S.settings[key]=r.result;dbSet();setView("settings");flash(label+" updated");};r.readAsDataURL(f);}
+function _imgPick(ev,key,label){const f=ev.target.files&&ev.target.files[0];if(!f)return;if(f.size>900000){alert("Please use an image under ~900 KB.");return;}const r=new FileReader();r.onload=()=>{S.settings[key]=r.result;dbSet();setView("settings");flash(label+" updated");};r.readAsDataURL(f);}
 function onSigPick(ev){_imgPick(ev,"signatureImg","Signature");}
 function onStampPick(ev){_imgPick(ev,"stampImg","Stamp");}
 function clearSig(){S.settings.signatureImg="";dbSet();setView("settings");}
