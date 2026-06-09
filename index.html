@@ -228,7 +228,8 @@ tbody tr:hover{background:#FCFBF7}
     </div>
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v3.5<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="nav" data-v="features">★ Key Features</div>
+    <div class="side-foot">CoreV | OxeFit · v3.6<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -381,13 +382,13 @@ const view=$("#view");
 const titles={dash:["Dashboard","Live view of the team"],emp:["Employees","Master records, compensation & compliance"],
   leave:["Leave","Annual & sick leave balances"],toil:["Overtime / TOIL","Overtime in lieu — weekday 2× / weekend 3×"],
   letters:["Letters","NOC, salary certificate & employment letters"],assets:["Assets","Company deliverables per employee"],
-  eos:["End of Service","Gratuity & final settlement (MOHRE)"],off:["Offboarding","Resignation / termination, clearance & final settlement"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],perf:["Performance","Reviews, appraisals & KPI scorecards"],org:["Organization","How CoreV | OxeFit operates today"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],tickets:["Annual Tickets","Air-ticket entitlement, due dates & liability"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"]};
+  eos:["End of Service","Gratuity & final settlement (MOHRE)"],off:["Offboarding","Resignation / termination, clearance & final settlement"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],perf:["Performance","Reviews, appraisals & KPI scorecards"],org:["Organization","How CoreV | OxeFit operates today"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],tickets:["Annual Tickets","Air-ticket entitlement, due dates & liability"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"],features:["Key Features","What this portal does — current as of v3.5"]};
 let cur="dash";
 
 function isHR(){return role==="admin"||role==="full";}
 function isAdmin(){return role==="admin";}
 /* ---------- rule-based access (role x tab: hide/read/write) ---------- */
-const TABS=[["dash","Dashboard"],["emp","Employees"],["org","Organization"],["docs","Documents"],["assets","Assets"],["leave","Leave"],["toil","Overtime / TOIL"],["salary","Monthly Salaries"],["tickets","Annual Tickets"],["iloe","ILOE"],["letters","Letters"],["eos","End of Service"],["off","Offboarding"],["perf","Performance"],["handbook","Company Handbook"],["settings","Settings"]];
+const TABS=[["dash","Dashboard"],["emp","Employees"],["org","Organization"],["docs","Documents"],["assets","Assets"],["leave","Leave"],["toil","Overtime / TOIL"],["salary","Monthly Salaries"],["tickets","Annual Tickets"],["iloe","ILOE"],["letters","Letters"],["eos","End of Service"],["off","Offboarding"],["perf","Performance"],["handbook","Company Handbook"],["settings","Settings"],["features","Key Features"]];
 const ROLES=[["admin","Admin"],["full","Full access"],["employee","Employee"]];
 function PERM_DEFAULTS(){const d={admin:{},full:{},employee:{}};const empWrite=["leave","iloe","letters","perf"];const empHide=["salary","tickets","settings","eos","docs"];
  TABS.forEach(([t])=>{d.admin[t]="write";d.full[t]=(t==="settings")?"hide":"write";d.employee[t]=empHide.includes(t)?"hide":(empWrite.includes(t)?"write":"read");});return d;}
@@ -417,7 +418,7 @@ function visibleEmps(){return isHR()?S.employees:S.employees.filter(e=>e.id===se
 function syncNavGroups(){document.querySelectorAll(".navgroup").forEach(g=>{if(g.querySelector(".nav.on"))g.classList.add("open");});}
 function setView(v){if(typeof canRead==="function"&&!canRead(v))v="dash";cur=v;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("on",n.dataset.v===v));syncNavGroups();
   $("#vTitle").textContent=titles[v][0]; $("#vSub").textContent= v==="toil"? ("Overtime in lieu — weekday "+(S.settings.weekdayMult||2)+"× / weekend "+(S.settings.toilMult||3)+"×") : titles[v][1];
-  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,off:rOff,iloe:rIloe,perf:rPerf,org:rOrg,handbook:rHandbook,salary:rSalary,tickets:rTickets,docs:rDocs,settings:rSettings})[v]();applyPerms();}
+  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,off:rOff,iloe:rIloe,perf:rPerf,org:rOrg,handbook:rHandbook,salary:rSalary,tickets:rTickets,docs:rDocs,settings:rSettings,features:rKeyFeatures})[v]();applyPerms();}
 
 function statusBadge(e){const m={Active:"b-green",Probation:"b-amber",Notice:"b-amber",Exited:"b-grey"};return `<span class="badge ${m[e.status]||'b-grey'}"><span class="dot" style="background:currentColor"></span>${e.status}</span>`;}
 function expBadge(days){if(days<0)return`<span class="badge b-red">Expired ${-days}d</span>`;if(days<=30)return`<span class="badge b-red">${days}d left</span>`;if(days<=60)return`<span class="badge b-amber">${days}d left</span>`;return`<span class="badge b-green">${days}d</span>`;}
@@ -1273,6 +1274,21 @@ function remindTickets(){const due=ticketsDueNow();if(!due.length)return;if(docu
 async function notifyTicketsDue(){const due=ticketsDueNow();if(!due.length)return;const key="ticketsNotified_"+dateStr(today());try{if(localStorage.getItem(key))return;}catch(_){}
  const ok=await sendMail(ADMIN_EMAILS,"\u2708 Annual tickets due \u2014 "+due.map(e=>e.name).join(", "),"The following employees are due their annual air ticket:\n\n"+due.map(e=>"- "+e.name+(e.ticketCost?(" (AED "+aed(e.ticketCost)+")"):"")).join("\n")+"\n\nPlease arrange and confirm payment in the Annual Tickets tab.\n\nCoreV | OxeFit HR portal");
  try{if(ok)localStorage.setItem(key,"1");}catch(_){}}
+
+/* ---------- Key features (about) ---------- */
+function rKeyFeatures(){
+ const sec=(t,items)=>`<div class="card" style="margin-bottom:12px"><h3 style="font-family:'Montserrat',sans-serif;margin:0 0 8px;color:var(--teal-d);font-size:15px">${t}</h3><ul style="margin:0 0 0 18px;line-height:1.7;font-size:13.5px;color:var(--ink)">${items.map(i=>`<li>${i}</li>`).join("")}</ul></div>`;
+ view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">A summary of everything the <b>CoreV | OxeFit</b> HR portal does, current as of <b>v3.5</b>. Use the access rules in Settings to control who can see each tab.</div>
+  ${sec("Platform, access & data",["Microsoft sign-in (SSO) with a no-login demo preview","Three roles \u2014 Admin, Full access, Employee \u2014 assigned by work email","Rule-based access matrix: Hide / Read / Write per tab, per role","Shared OneDrive sync with concurrent-safe merging; works offline against a local copy","Grouped, collapsible navigation and company-logo branding"])}
+  ${sec("Dashboard",["Document-expiry alerts: visa, Emirates ID, passport, insurance, ILOE","Currently on leave, unpaid-leave flags, and outstanding medical reports","Birthdays (today + next 7 days) and total annual-ticket liability"])}
+  ${sec("People",["Employees \u2014 full records incl. date of birth & age, compensation, visa/compliance and status; add, edit, delete (with cascade)","Organization \u2014 the live chart of partners, sales regions and functions","Documents \u2014 passport, Emirates ID, visa, insurance & MOHRE-card uploads","Assets \u2014 issue and return of company property"])}
+  ${sec("Leave & Time",["Annual leave on a 23 working-day basis, January reset, capped carry-over","Sick leave 15 / 30 / 45 tiers, probation lock, and persistent medical-report reminders","Emergency leave (paid from balance, or unpaid & flagged) and Unpaid leave","Approval workflow: request \u2192 emails Ahmed \u2192 approve/reject \u2192 emails the employee","4-week notice soft warning; Overtime / TOIL at weekday 2\u00d7 / weekend 3\u00d7"])}
+  ${sec("Payroll & Compliance",["Monthly Salaries with per-day \u00f722 and calendar pro-ration for joiners/leavers","Payslips on the CoreV letterhead \u2014 generated once Ahmed confirms the run, then emailed to employees (and printable/PDF)","Annual Tickets \u2014 due dates, accrued liability, and admin-confirmed payments that reset the cycle","ILOE \u2014 self-service registration, automatic Category A/B, compliance status","Letters \u2014 NOC, Salary Certificate, Employment Letter on letterhead (logo header + branded footer)","End of Service gratuity (Art. 51) plus unused-leave payout","Offboarding \u2014 clearance checklist (visa, insurance & MOHRE cancellation, property return, accounts, NOC), settlement estimate, and notifications to Ahmed & the Office Manager"])}
+  ${sec("Performance",["Reviews & Appraisals \u2014 competency ratings, KPI scorecards (handbook templates), overall rating, PIP flag; Draft \u2192 Shared (employee emailed) \u2192 Acknowledged","Reviewer auto-routes by reporting line (Kamal, Sami, Ahmed)","KPI guidelines & rating-scale reference for the whole team","Company Handbook \u2014 searchable policy with in-tool cross-references"])}
+  ${sec("Notifications (Microsoft Graph email)",["Leave decisions, letter requests, performance reviews & PIPs","Birthdays and annual-tickets-due alerts to admins","Payslips emailed to employees once payroll is confirmed"])}
+  ${sec("UAE labour-law alignment",["Gratuity (Art. 51), sick-leave tiers (Art. 31), unpaid-leave deduction at salary \u00f722","ILOE categories and the handbook's overtime (2\u00d7 / 3\u00d7) and approval rules"])}
+  <div class="hint" style="margin-top:4px">Current version: v3.5 \u00b7 single self-contained app, shared via the team's OneDrive.</div>`;
+}
 
 /* ---------- Organization chart ---------- */
 const SALES_FUNCS=["B2B Sales Lead MGMT Per Sector","Growth Sales Pipeline & Forecasting","Building Business Use-Cases per Sector","Engaging in Demos, Events & Awareness","Customer Networking & Relationship"];
