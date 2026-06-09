@@ -233,7 +233,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.10<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.11<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -702,7 +702,7 @@ function rLetters(){
    <div class="tablewrap">${S.letters.length?`<table><thead><tr><th>Ref</th><th>Employee</th><th>Type</th><th>Addressed to</th><th>Status</th><th class="right"></th></tr></thead><tbody>
    ${S.letters.filter(l=>isHR()||l.emp===selfId()).slice().reverse().map(l=>{const e=S.employees.find(e=>e.id===l.emp);const m={Submitted:'b-amber','Manager approved':'b-amber','HR approved':'b-teal',Issued:'b-green',Rejected:'b-red'};
       return`<tr><td class="mono">${l.ref}</td><td class="emp-name">${e?e.name:'—'}</td><td>${l.ltype}</td><td class="muted">${l.addressedTo||'To Whom It May Concern'}</td><td><span class="badge ${m[l.status]||'b-grey'}">${l.status}</span></td>
-      <td class="row-act"><button class="btn g sm" onclick="genLetter('${l.id}')">Generate</button>${isHR()?`<button class="btn g sm" onclick="advanceLetter('${l.id}')">Advance</button><button class="btn danger sm" onclick="delItem('letters','${l.id}','letters')">✕</button>`:''}</td></tr>`}).join("")}
+      <td class="row-act"><button class="btn g sm" onclick="genLetter('${l.id}')">View / Download</button>${isHR()?`<button class="btn g sm" onclick="advanceLetter('${l.id}')">Advance</button><button class="btn danger sm" onclick="delItem('letters','${l.id}','letters')">✕</button>`:''}</td></tr>`}).join("")}
    </tbody></table>`:`<div class="empty"><b>No requests yet</b>Raise a request for an NOC, salary certificate or employment letter.</div>`}</div>`;
 }
 function letterForm(){
@@ -720,7 +720,7 @@ function saveLetter(){
   const L={id:uid(),ref:`CV-${pre}-${String(n).padStart(4,'0')}`,emp,ltype,addressedTo:$("#f_addr").value,reason:$("#f_reason").value,status:"Submitted",issued:dateStr(today()),_ts:Date.now()};
   S.letters.push(L);dbSet();notifyLetterRequest(L);closeModal();updateBadges();setView("letters");
 }
-function advanceLetter(id){const l=S.letters.find(x=>x.id===id);const flow=["Submitted","Manager approved","HR approved","Issued"];const i=flow.indexOf(l.status);l.status=flow[Math.min(i+1,flow.length-1)];l._ts=Date.now();dbSet("letters",S.letters);updateBadges();setView("letters");}
+function advanceLetter(id){const l=S.letters.find(x=>x.id===id);const flow=["Submitted","Manager approved","HR approved","Issued"];const i=flow.indexOf(l.status);const ns=flow[Math.min(i+1,flow.length-1)];const became=(ns==="Issued"&&l.status!=="Issued");l.status=ns;l._ts=Date.now();dbSet("letters",S.letters);updateBadges();setView("letters");if(became)notifyLetterIssued(l);}
 function buildLetterText(l){
   const e=S.employees.find(x=>x.id===l.emp)||{};const c=S.settings;
   const sign=`\n\nFor ${c.companyName}\n\n\n_______________________\n${c.signatory||'[Authorised signatory]'}\n${c.signatoryTitle}\nTrade License No: ${c.tradeLicense||'[\u2014]'}\n${c.address}${c.phone?' | '+c.phone:''}`;
@@ -1477,6 +1477,31 @@ async function notifyLetterRequest(l){
   const mailto=`mailto:${recips.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(intro+"\nOpen the portal to view and print the full letter.")}`;
   try{window.open(mailto,"_blank");}catch(_){}
   flash("Email draft opened for Ahmed & Gladys");
+}
+function letterEmailHTML(l){
+  const e=S.employees.find(x=>x.id===l.emp)||{};const c=S.settings;const logo=c.logo;
+  const meta=[c.address,c.phone,c.tradeLicense?("Trade License "+c.tradeLicense):""].filter(Boolean).join("  \u00b7  ");
+  let bodyHtml=buildLetterText(l).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  if(l.status==="Issued"&&(c.signatureImg||c.stampImg)){
+    const sig=c.signatureImg?`<img src="${c.signatureImg}" style="height:54px;display:inline-block">`:'';
+    const stamp=c.stampImg?`<img src="${c.stampImg}" style="height:108px;position:absolute;right:24px;margin-top:-26px;transform:rotate(-7deg);opacity:.92">`:'';
+    bodyHtml=bodyHtml.replace('_______________________',`<span style="display:block;position:relative">${sig}${stamp}</span>_______________________`);
+  }
+  return `<div style="max-width:660px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#fff">
+    <div style="padding:20px 26px 12px;border-bottom:2px solid #1b9aaa">
+      ${logo?`<img src="${logo}" alt="" style="max-height:60px;max-width:240px;object-fit:contain">`:`<div style="font-size:20px;font-weight:700;color:#0E1A40">${c.companyName||'CoreV | OxeFit'}</div>`}
+      <div style="font-size:11px;color:#777;margin-top:6px">${meta}</div>
+    </div>
+    <pre style="white-space:pre-wrap;font-family:'Courier New',monospace;font-size:13px;line-height:1.6;color:#222;padding:20px 26px;margin:0">${bodyHtml}</pre>
+    <div style="text-align:center;padding:12px;border-top:2px solid #1b9aaa;font-size:10.5px;color:#777"><b style="color:#0E1A40">${c.companyName||'CoreV | OxeFit'}</b>${c.website?'  \u00b7  '+c.website:''}<div style="margin-top:3px">Digitally signed &amp; stamped. Valid as of ${prettyD(l.issued)}.</div></div>
+  </div>`;
+}
+async function notifyLetterIssued(l){
+  const e=S.employees.find(x=>x.id===l.emp)||{};
+  if(!e.email){flash("Letter issued \u2014 no employee email on file to notify");return;}
+  const intro=`<p style="font-family:Arial">Dear ${e.name||''},</p><p style="font-family:Arial">Your <b>${l.ltype}</b> (ref ${l.ref}) has been approved and issued. The signed &amp; stamped copy is below \u2014 you can also download it any time from the CoreV | OxeFit portal under <b>Letters</b>.</p>`;
+  const ok=await sendMailHtml(e.email,"Your "+l.ltype+" is ready \u2014 "+l.ref,intro+letterEmailHTML(l));
+  flash(ok?("Issued & emailed to "+e.name):"Issued \u2014 employee can download from the portal (email not sent)");
 }
 
 /* ---------- demo / preview (no sign-in, nothing saved) ---------- */
