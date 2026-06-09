@@ -106,9 +106,10 @@ tbody tr:hover{background:#FCFBF7}
 #printArea .letter-preview{border-radius:0;border-top:0;border-bottom:0}
 .lf{background:#fff;border:1px solid var(--line);border-top:2px solid var(--teal);border-radius:0 0 10px 10px;padding:11px 20px 14px;text-align:center;font-size:10.5px;color:var(--ink-soft);letter-spacing:.3px}
 .lf b{font-family:"Montserrat",sans-serif;color:var(--teal-d);font-size:12px;letter-spacing:0}
-.sig-wrap{display:block;position:relative;height:62px;margin:2px 0}
-.sig-img{height:56px;object-fit:contain}
-.stamp-img{position:absolute;right:40px;top:-26px;max-height:118px;max-width:118px;opacity:.92;transform:rotate(-7deg)}
+.sig-wrap{display:block;position:relative;min-height:104px;margin:8px 0}
+.sig-img{height:92px;object-fit:contain;display:block}
+.stamp-img{position:absolute;right:56px;top:-8px;max-height:150px;max-width:150px;opacity:.9;transform:rotate(-8deg);display:inline-block}
+.stamp-img svg{width:148px;height:148px;display:block}
 .row-act{display:flex;gap:6px;justify-content:flex-end}
 .tag{font-size:11px;color:var(--ink-soft);background:#EFEBE2;padding:2px 7px;border-radius:5px}
 @media print{ .side,.top,.sec-h,.scrim .foot{display:none!important} body *{visibility:hidden} #printArea,#printArea *{visibility:visible} #printArea{position:absolute;left:0;top:0;width:100%;padding:0;border:none;box-shadow:none} }
@@ -233,7 +234,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.11<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.12<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -729,6 +730,8 @@ function buildLetterText(l){
   if(l.ltype==="Salary Certificate")return `${head}\n${l.addressedTo||'TO WHOM IT MAY CONCERN'}\n\nSALARY CERTIFICATE\n\nThis is to certify that ${e.name} (${e.nationality||'[\u2014]'}, passport no. ${e.passportNo||'[\u2014]'}) has been employed with ${c.companyName} as ${e.designation||'[\u2014]'} in the ${e.department||'[\u2014]'} department since ${prettyD(e.start)}.\n\nThe employee's current monthly remuneration is as follows:\n\n  Basic Salary .......... AED ${fmt(e.basic)}\n  Housing Allowance ..... AED ${fmt(e.housing)}\n  Transport Allowance ... AED ${fmt(e.transport)}\n  Other Allowance ....... AED ${fmt(e.other)}\n  ------------------------------------\n  Total Monthly Salary .. AED ${fmt(totalSalary(e))}\n\nThis certificate is issued upon the employee's request without any liability on the part of ${c.companyName}.`+sign;
   return `${head}\n${l.addressedTo||'TO WHOM IT MAY CONCERN'}\n\nEMPLOYMENT VERIFICATION LETTER\n\nThis is to confirm that ${e.name}, holder of passport number ${e.passportNo||'[\u2014]'} (${e.nationality||'[\u2014]'}), is a current full-time employee of ${c.companyName}, holding the position of ${e.designation||'[\u2014]'} in the ${e.department||'[\u2014]'} department.\n\n${e.name} has been employed with us since ${prettyD(e.start)} and remains in active service as of the date of this letter, sponsored under a ${e.visaType||'[\u2014]'} visa.\n\nThis letter is issued at the employee's request and may be presented to the relevant authority as proof of employment.`+sign;
 }
+function defaultStampSVG(l){const c=S.settings;const nm=(c.companyName||"CoreV | OxeFit");const dt=prettyD((l&&l.issued)||dateStr(today()));
+  return `<svg width="148" height="148" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg"><circle cx="75" cy="75" r="68" fill="none" stroke="#1b9aaa" stroke-width="3"/><circle cx="75" cy="75" r="58" fill="none" stroke="#1b9aaa" stroke-width="1.4"/><text x="75" y="56" text-anchor="middle" font-family="Montserrat,Arial,sans-serif" font-weight="700" font-size="13" fill="#1b9aaa">${nm}</text><text x="75" y="82" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="#1b9aaa" letter-spacing="3">APPROVED</text><text x="75" y="100" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#1b9aaa">${dt}</text></svg>`;}
 function genLetter(id){
   const l=S.letters.find(x=>x.id===id);const body=buildLetterText(l);
   const c=S.settings;const logo=c.logo;
@@ -737,9 +740,9 @@ function genLetter(id){
   const footer=`<div class="lf"><b>${c.companyName||"CoreV | OxeFit"}</b>${c.website?("  \u00b7  "+c.website):""}<div style="margin-top:3px">This letter is generated from the CoreV | OxeFit HR portal and is valid as of ${prettyD(l.issued)}.</div></div>`;
   let bodyHtml=body.replace(/</g,'&lt;');
   const signed=(l.status==="Issued");
-  if(signed&&(c.signatureImg||c.stampImg)){
+  if(signed){
     const sig=c.signatureImg?`<img class="sig-img" src="${c.signatureImg}" alt="">`:'';
-    const stamp=c.stampImg?`<img class="stamp-img" src="${c.stampImg}" alt="">`:'';
+    const stamp=c.stampImg?`<img class="stamp-img" src="${c.stampImg}" alt="">`:`<span class="stamp-img">${defaultStampSVG(l)}</span>`;
     bodyHtml=bodyHtml.replace('_______________________',`<span class="sig-wrap">${sig}${stamp}</span>_______________________`);
   }
   const sigNote=(!signed&&(c.signatureImg||c.stampImg))?`<div class="hint" style="margin-top:8px">Signature & stamp are applied automatically once this letter reaches <b>Issued</b> status.</div>`:'';
@@ -1482,10 +1485,10 @@ function letterEmailHTML(l){
   const e=S.employees.find(x=>x.id===l.emp)||{};const c=S.settings;const logo=c.logo;
   const meta=[c.address,c.phone,c.tradeLicense?("Trade License "+c.tradeLicense):""].filter(Boolean).join("  \u00b7  ");
   let bodyHtml=buildLetterText(l).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  if(l.status==="Issued"&&(c.signatureImg||c.stampImg)){
-    const sig=c.signatureImg?`<img src="${c.signatureImg}" style="height:54px;display:inline-block">`:'';
-    const stamp=c.stampImg?`<img src="${c.stampImg}" style="height:108px;position:absolute;right:24px;margin-top:-26px;transform:rotate(-7deg);opacity:.92">`:'';
-    bodyHtml=bodyHtml.replace('_______________________',`<span style="display:block;position:relative">${sig}${stamp}</span>_______________________`);
+  if(l.status==="Issued"){
+    const sig=c.signatureImg?`<img src="${c.signatureImg}" style="height:86px;display:block">`:'';
+    const stamp=c.stampImg?`<img src="${c.stampImg}" style="height:140px;position:absolute;right:20px;margin-top:-30px;transform:rotate(-8deg);opacity:.9">`:`<span style="position:absolute;right:18px;margin-top:-24px;transform:rotate(-8deg);display:inline-block">${defaultStampSVG(l)}</span>`;
+    bodyHtml=bodyHtml.replace('_______________________',`<span style="display:block;position:relative;min-height:100px">${sig}${stamp}</span>_______________________`);
   }
   return `<div style="max-width:660px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#fff">
     <div style="padding:20px 26px 12px;border-bottom:2px solid #1b9aaa">
