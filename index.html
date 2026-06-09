@@ -99,7 +99,7 @@ tbody tr:hover{background:#FCFBF7}
 .empty b{display:block;font-family:"Montserrat",sans-serif;font-size:18px;color:var(--ink);margin-bottom:4px}
 .pill-row{display:flex;flex-wrap:wrap;gap:6px}
 .letter-preview{font-family:"IBM Plex Mono",monospace;font-size:12.5px;white-space:pre-wrap;background:#FBFAF6;border:1px solid var(--line);border-radius:10px;padding:20px;line-height:1.7}
-.lh{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:#fff;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;padding:20px 20px 0}
+.lh{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;background:#fff;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;padding:20px 24px 0}
 .lh img{max-height:76px;max-width:260px;object-fit:contain}
 .lh b{font-family:"Montserrat",sans-serif;font-size:21px;letter-spacing:-.3px;color:var(--teal-d)}
 .lh .lh-meta{font-size:10.5px;color:var(--ink-soft);border-top:2px solid var(--teal);padding:9px 0;width:100%;margin-top:6px;letter-spacing:.3px}
@@ -229,7 +229,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.6<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.8<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -869,7 +869,7 @@ function payslipData(e,m){const pr=m.split("-").map(Number),yy=pr[0],mm=pr[1];
 function payslipInline(e,m){const d=payslipData(e,m);const c=S.settings;const logo=c.logo;const money=n=>"AED "+aed(n);
   const row=(l,v,bold)=>`<tr><td style="padding:6px 0;color:#333">${l}</td><td style="padding:6px 0;text-align:right;font-family:monospace;${bold?'font-weight:700;border-top:1px solid #eee':''}">${v}</td></tr>`;
   return `<div style="max-width:640px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#fff">
-    <div style="text-align:center;padding:20px 20px 12px;border-bottom:2px solid #1b9aaa">
+    <div style="text-align:left;padding:20px 24px 12px;border-bottom:2px solid #1b9aaa">
       ${logo?`<img src="${logo}" alt="" style="max-height:62px;max-width:240px;object-fit:contain">`:`<div style="font-size:20px;font-weight:700;color:#0E1A40">${c.companyName||'CoreV | OxeFit'}</div>`}
       <div style="font-size:11px;color:#777;margin-top:6px">${[c.address,c.phone,c.tradeLicense?('Trade License '+c.tradeLicense):''].filter(Boolean).join('  \u00b7  ')}</div>
     </div>
