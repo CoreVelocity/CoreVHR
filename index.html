@@ -228,7 +228,7 @@ tbody tr:hover{background:#FCFBF7}
     </div>
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
-    <div class="side-foot">CoreV | OxeFit · v3.4<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.5<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -249,7 +249,7 @@ tbody tr:hover{background:#FCFBF7}
 
 <script>
 /* ============ config: Microsoft SSO + OneDrive shared sync ============ */
-const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","tombstones","settings"];
+const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","tombstones","settings"];
 const ONEDRIVE_CONFIG = {
   clientId   : 'cd1b7f5f-5ff9-4066-ab4f-06f270a94fcb',          // same Azure app as the working Sales/Delivery tracker
   authority  : 'https://login.microsoftonline.com/core-velocity.com',
@@ -267,7 +267,7 @@ const ROLE_MAP = {
 };
 function roleForEmail(e){return ROLE_MAP[(e||'').toLowerCase().trim()]||'employee';}
 
-let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],offboardings:[],tickets:[],tombstones:{},
+let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],offboardings:[],tickets:[],payruns:[],tombstones:{},
   settings:{companyName:"CoreV | OxeFit",tradeLicense:"",address:"Dubai, United Arab Emirates",phone:"",
     signatory:"",signatoryTitle:"HR Manager",website:"",carryCap:23,dailyHours:8,toilMult:3,weekdayMult:2,ticketCycle:12,logo:""}};
 let role="employee", currentUser="", currentEmail="";
@@ -318,6 +318,12 @@ async function sendMail(to,subject,body){
   if(!msalAccount)return false;
   try{const tok=await getAccessToken();
     const res=await fetch("https://graph.microsoft.com/v1.0/me/sendMail",{method:"POST",headers:{Authorization:"Bearer "+tok,"Content-Type":"application/json"},body:JSON.stringify({message:{subject,body:{contentType:"Text",content:body},toRecipients:(Array.isArray(to)?to:[to]).map(a=>({emailAddress:{address:a}}))},saveToSentItems:true})});
+    return res.ok;}catch(_){return false;}
+}
+async function sendMailHtml(to,subject,html){
+  if(!msalAccount)return false;
+  try{const tok=await getAccessToken();
+    const res=await fetch("https://graph.microsoft.com/v1.0/me/sendMail",{method:"POST",headers:{Authorization:"Bearer "+tok,"Content-Type":"application/json"},body:JSON.stringify({message:{subject,body:{contentType:"HTML",content:html},toRecipients:(Array.isArray(to)?to:[to]).map(a=>({emailAddress:{address:a}}))},saveToSentItems:true})});
     return res.ok;}catch(_){return false;}
 }
 const APPROVER="ahmed@core-velocity.com";
@@ -830,12 +836,79 @@ function rSalary(){
     tSal+=sal;tOnb+=onb;tDue+=due;
     return {e,sal,perDay,onb,due,joined,full};
   });
-  view.innerHTML=`<div class="sec-h"><h2>Monthly salaries</h2><input type="month" value="${salaryMonth}" onchange="salaryMonth=this.value;setView('salary')" style="max-width:175px"></div>
-   <div class="tablewrap" style="overflow-x:auto">${rows.length?`<table><thead><tr><th>ID</th><th>Employee</th><th>Role</th><th>Start</th><th class="right">Monthly salary</th><th class="right">Onboarding</th><th class="right">Per day \u00f722</th><th class="right">Due this month</th></tr></thead><tbody>
-   ${rows.map(r=>`<tr><td class="mono">${r.e.empId||''}</td><td class="emp-name">${r.e.name}</td><td>${r.e.designation||'\u2014'}</td><td class="mono">${prettyD(r.e.start)}</td><td class="right mono">${aed(r.sal)}</td><td class="right mono">${r.onb?aed(r.onb):'\u2014'}</td><td class="right mono">${aed(r.perDay)}</td><td class="right mono"><b>${aed(r.due)}</b>${r.joined?' <span class="badge b-amber">joined</span>':(!r.full?' <span class="badge b-grey">part</span>':'')}</td></tr>`).join("")}
-   </tbody><tfoot><tr style="font-weight:700;background:#FBFAF6"><td colspan="4">Total \u2014 ${rows.length} employee(s)</td><td class="right mono">${aed(tSal)}</td><td class="right mono">${aed(tOnb)}</td><td></td><td class="right mono" style="color:var(--teal)">${aed(tDue)}</td></tr></tfoot></table>`:`<div class="empty"><b>No payroll for ${salaryMonth}</b>No employees were active that month.</div>`}</div>
-   <div class="hint" style="margin-top:10px">Per-day = total salary \u00f7 22. Due = full monthly salary for a complete month, pro-rated by calendar days for partial months (joiners/leavers). Onboarding (visa + insurance) cost is added in the employee's joining month.</div>`;
+  const conf=isMonthConfirmed(salaryMonth); const prun=payrunFor(salaryMonth);
+  view.innerHTML=`<div class="sec-h"><h2>Monthly salaries <span class="badge ${conf?'b-green':'b-amber'}" style="vertical-align:middle">${conf?'Confirmed':'Draft'}</span></h2><div class="flex" style="gap:8px;align-items:center"><input type="month" value="${salaryMonth}" onchange="salaryMonth=this.value;setView('salary')" style="max-width:165px">${conf?`<button class="btn g" onclick="emailAllPayslips('${salaryMonth}')">Email all payslips</button><button class="btn g" onclick="unconfirmPayroll('${salaryMonth}')">Reopen</button>`:`<button class="btn p" onclick="confirmPayroll('${salaryMonth}')">Confirm payroll</button>`}</div></div>
+   <div class="card" style="background:${conf?'var(--green-wash);border-color:#Bfe0CC':'var(--amber-wash);border-color:#EBD9A8'};margin-bottom:8px">${conf?`Payroll confirmed${prun&&prun.by?(' by '+prun.by):''}${prun&&prun.on?(' on '+prettyD(prun.on)):''} \u2014 payslips can now be emailed to employees.`:`Draft \u2014 review the figures below, then <b>Confirm payroll</b> (admin) to generate & email payslips.`}</div>
+   <div class="tablewrap" style="overflow-x:auto">${rows.length?`<table><thead><tr><th>ID</th><th>Employee</th><th>Role</th><th>Start</th><th class="right">Monthly salary</th><th class="right">Onboarding</th><th class="right">Per day \u00f722</th><th class="right">Due this month</th><th class="right">Payslip</th></tr></thead><tbody>
+   ${rows.map(r=>`<tr><td class="mono">${r.e.empId||''}</td><td class="emp-name">${r.e.name}</td><td>${r.e.designation||'\u2014'}</td><td class="mono">${prettyD(r.e.start)}</td><td class="right mono">${aed(r.sal)}</td><td class="right mono">${r.onb?aed(r.onb):'\u2014'}</td><td class="right mono">${aed(r.perDay)}</td><td class="right mono"><b>${aed(r.due)}</b>${r.joined?' <span class="badge b-amber">joined</span>':(!r.full?' <span class="badge b-grey">part</span>':'')}</td><td class="right"><button class="btn g sm" onclick="payslipView('${r.e.id}','${salaryMonth}')">View</button></td></tr>`).join("")}
+   </tbody><tfoot><tr style="font-weight:700;background:#FBFAF6"><td colspan="4">Total \u2014 ${rows.length} employee(s)</td><td class="right mono">${aed(tSal)}</td><td class="right mono">${aed(tOnb)}</td><td></td><td class="right mono" style="color:var(--teal)">${aed(tDue)}</td><td></td></tr></tfoot></table>`:`<div class="empty"><b>No payroll for ${salaryMonth}</b>No employees were active that month.</div>`}</div>
+   <div class="hint" style="margin-top:10px">Per-day = total salary \u00f7 22. Due = full monthly salary for a complete month, pro-rated by calendar days for partial months (joiners/leavers). Onboarding (visa + insurance) cost is added in the employee's joining month. Payslips exclude onboarding cost and deduct any unpaid-leave days.</div>`;
 }
+
+/* ---------- Payslips (monthly, confirmed by admin) ---------- */
+const MONTHN=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function payrunFor(m){return S.payruns.find(p=>p.month===m);}
+function isMonthConfirmed(m){const p=payrunFor(m);return !!(p&&p.status==="Confirmed");}
+function confirmPayroll(m){if(!isAdmin()){alert("Only an admin (e.g. Ahmed) can confirm payroll.");return;}
+  let p=payrunFor(m);if(p){p.status="Confirmed";p.by=currentUser;p.on=dateStr(today());p._ts=Date.now();}else S.payruns.push({id:uid(),month:m,status:"Confirmed",by:currentUser,on:dateStr(today()),_ts:Date.now()});
+  dbSet();setView("salary");flash("Payroll for "+m+" confirmed");}
+function unconfirmPayroll(m){if(!isAdmin())return;const p=payrunFor(m);if(p){p.status="Draft";p._ts=Date.now();dbSet();setView("salary");flash("Payroll reopened");}}
+function unpaidDaysInMonth(e,yy,mm){const mStart=new Date(yy,mm-1,1),mEnd=new Date(yy,mm,0);let n=0;
+  S.leaves.filter(l=>l.emp===e.id&&l.status==="Approved"&&(l.type==="Unpaid"||(l.type==="Emergency"&&!l.paid))).forEach(l=>{const s2=D(l.start),en=D(l.end);if(!s2||!en)return;const a=s2>mStart?s2:mStart,b=en<mEnd?en:mEnd;if(b>=a)n+=daysBetween(a,b)+1;});
+  return n;}
+function payslipData(e,m){const pr=m.split("-").map(Number),yy=pr[0],mm=pr[1];
+  const mStart=new Date(yy,mm-1,1),mEnd=new Date(yy,mm,0),dim=mEnd.getDate();
+  const s2=D(e.start),en=e.endDate?D(e.endDate):null;
+  const full=(s2<=mStart)&&(!en||en>=mEnd);
+  const aS=s2>mStart?s2:mStart,aE=(en&&en<mEnd)?en:mEnd;const active=Math.max(0,daysBetween(aS,aE)+1);
+  const factor=full?1:(dim?active/dim:0);
+  const basic=(e.basic||0)*factor,housing=(e.housing||0)*factor,transport=(e.transport||0)*factor,other=(e.other||0)*factor;
+  const gross=basic+housing+transport+other;const perDay=totalSalary(e)/22;const ud=unpaidDaysInMonth(e,yy,mm);const ded=ud*perDay;const net=Math.max(0,gross-ded);
+  return {yy,mm,full,factor,active,dim,basic,housing,transport,other,gross,perDay,ud,ded,net};}
+function payslipInline(e,m){const d=payslipData(e,m);const c=S.settings;const logo=c.logo;const money=n=>"AED "+aed(n);
+  const row=(l,v,bold)=>`<tr><td style="padding:6px 0;color:#333">${l}</td><td style="padding:6px 0;text-align:right;font-family:monospace;${bold?'font-weight:700;border-top:1px solid #eee':''}">${v}</td></tr>`;
+  return `<div style="max-width:640px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#fff">
+    <div style="text-align:center;padding:20px 20px 12px;border-bottom:2px solid #1b9aaa">
+      ${logo?`<img src="${logo}" alt="" style="max-height:62px;max-width:240px;object-fit:contain">`:`<div style="font-size:20px;font-weight:700;color:#0E1A40">${c.companyName||'CoreV | OxeFit'}</div>`}
+      <div style="font-size:11px;color:#777;margin-top:6px">${[c.address,c.phone,c.tradeLicense?('Trade License '+c.tradeLicense):''].filter(Boolean).join('  \u00b7  ')}</div>
+    </div>
+    <div style="padding:18px 22px">
+      <div style="font-size:16px;font-weight:700;color:#0E1A40">Salary Payslip</div>
+      <div style="color:#777;font-size:12px;margin-bottom:14px">${MONTHN[d.mm-1]} ${d.yy}</div>
+      <table style="width:100%;font-size:13px;margin-bottom:14px;border-collapse:collapse"><tbody>
+        <tr><td style="color:#777;padding:3px 0">Employee</td><td style="text-align:right;font-weight:600">${e.name}</td></tr>
+        <tr><td style="color:#777;padding:3px 0">Employee ID</td><td style="text-align:right">${e.empId||'\u2014'}</td></tr>
+        <tr><td style="color:#777;padding:3px 0">Designation</td><td style="text-align:right">${e.designation||'\u2014'}</td></tr>
+        <tr><td style="color:#777;padding:3px 0">Pay period</td><td style="text-align:right">${MONTHN[d.mm-1]} ${d.yy}${d.full?'':' (pro-rated '+d.active+'/'+d.dim+' days)'}</td></tr>
+      </tbody></table>
+      <div style="font-weight:700;color:#0E1A40;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:2px">Earnings</div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse"><tbody>
+        ${row('Basic salary',money(d.basic))}${row('Housing allowance',money(d.housing))}${row('Transport allowance',money(d.transport))}${row('Other allowance',money(d.other))}${row('Gross earnings',money(d.gross),true)}
+      </tbody></table>
+      <div style="font-weight:700;color:#0E1A40;border-bottom:1px solid #eee;padding:10px 0 4px;margin-bottom:2px">Deductions</div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse"><tbody>
+        ${row('Unpaid leave ('+d.ud+' day'+(d.ud===1?'':'s')+' \u00d7 '+money(d.perDay)+')',d.ded?('- '+money(d.ded)):money(0))}
+      </tbody></table>
+      <table style="width:100%;font-size:15px;margin-top:10px;border-collapse:collapse"><tbody>
+        <tr><td style="padding:10px 0;font-weight:700;color:#0E1A40;border-top:2px solid #1b9aaa">Net pay</td><td style="padding:10px 0;text-align:right;font-weight:700;color:#1b9aaa;font-family:monospace;border-top:2px solid #1b9aaa">${money(d.net)}</td></tr>
+      </tbody></table>
+    </div>
+    <div style="text-align:center;padding:12px;border-top:2px solid #1b9aaa;font-size:10.5px;color:#777"><b style="color:#0E1A40">${c.companyName||'CoreV | OxeFit'}</b>${c.website?'  \u00b7  '+c.website:''}<div style="margin-top:3px">System-generated payslip, confirmed by management. Net pay is indicative of the amount processed via WPS.</div></div>
+  </div>`;}
+function payslipView(empId,m){const e=S.employees.find(x=>x.id===empId);if(!e)return;const conf=isMonthConfirmed(m);
+  const body=`<div id="printArea">${payslipInline(e,m)}</div>${conf?'':'<div class="hint" style="margin-top:10px">\u26a0 Payroll for this month is not yet confirmed \u2014 confirm the run to email payslips.</div>'}`;
+  const btns=[];if(conf&&e.email)btns.push(["Email payslip","emailPayslip('"+empId+"','"+m+"')","p"]);btns.push(["Print / PDF","window.print()","g"]);btns.push(["Close","closeModal()","g"]);
+  modal("Payslip \u2014 "+e.name,body,btns);}
+async function emailPayslip(empId,m){if(!isMonthConfirmed(m)){alert("Confirm the payroll run first.");return;}
+  const e=S.employees.find(x=>x.id===empId);if(!e)return;if(!e.email){flash("No work email on file for "+e.name);return;}
+  const ok=await sendMailHtml(e.email,"Your payslip \u2014 "+MONTHN[(+m.split('-')[1])-1]+" "+m.split('-')[0],payslipInline(e,m));
+  flash(ok?("Payslip emailed to "+e.name):"Could not send (sign in / check email)");}
+function emailAllPayslips(m){if(!isMonthConfirmed(m)){alert("Confirm the payroll run first.");return;}
+  const yy=+m.split('-')[0],mm=+m.split('-')[1];const mEnd=new Date(yy,mm,0),mStart=new Date(yy,mm-1,1);
+  const list=S.employees.filter(e=>e.email&&D(e.start)<=mEnd&&(!e.endDate||D(e.endDate)>=mStart));
+  if(!list.length){alert("No employees with a work email for this month.");return;}
+  if(!confirm("Email payslips for "+m+" to "+list.length+" employee(s)?"))return;
+  (async()=>{let n=0;for(const e of list){const ok=await sendMailHtml(e.email,"Your payslip \u2014 "+MONTHN[mm-1]+" "+yy,payslipInline(e,m));if(ok)n++;}flash("Payslips emailed: "+n+"/"+list.length);})();}
 
 /* ---------- Documents (admin & full) ---------- */
 const DOC_TYPES=["Passport","Emirates ID","Visa","Insurance","MOHRE card"];
@@ -1437,7 +1510,7 @@ async function getAccessToken(){
 }
 let _fileRef=null,_accessError=false;
 const _fileName=(ONEDRIVE_CONFIG.filePath.split("/").pop()||"corev-hr.json").toLowerCase();
-const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets"];
+const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns"];
 function driveRootUrl(){const upn=ONEDRIVE_CONFIG.sharedDriveUser;
   if(upn)return `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;
   return `https://graph.microsoft.com/v1.0/me/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;}
