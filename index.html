@@ -218,6 +218,8 @@ tbody tr:hover{background:#FCFBF7}
         <div class="nav" data-v="tickets">Annual Tickets</div>
         <div class="nav" data-v="iloe">ILOE</div>
         <div class="nav" data-v="insurance">Insurance</div>
+        <div class="nav" data-v="companydocs">Company Docs</div>
+        <div class="nav" data-v="marketing">Marketing</div>
         <div class="nav" data-v="letters">Letters <small id="navLetters" style="display:none"></small></div>
         <div class="nav" data-v="eos">End of Service</div>
         <div class="nav" data-v="off">Offboarding</div>
@@ -234,7 +236,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.13<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.15<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -255,7 +257,7 @@ tbody tr:hover{background:#FCFBF7}
 
 <script>
 /* ============ config: Microsoft SSO + OneDrive shared sync ============ */
-const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","tombstones","settings"];
+const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing","tombstones","settings"];
 const ONEDRIVE_CONFIG = {
   clientId   : 'cd1b7f5f-5ff9-4066-ab4f-06f270a94fcb',          // same Azure app as the working Sales/Delivery tracker
   authority  : 'https://login.microsoftonline.com/core-velocity.com',
@@ -273,7 +275,7 @@ const ROLE_MAP = {
 };
 function roleForEmail(e){return ROLE_MAP[(e||'').toLowerCase().trim()]||'employee';}
 
-let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],offboardings:[],tickets:[],payruns:[],tombstones:{},
+let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],offboardings:[],tickets:[],payruns:[],companyDocs:[],marketing:[],tombstones:{},
   settings:{companyName:"CoreV | OxeFit",tradeLicense:"",address:"Dubai, United Arab Emirates",phone:"",
     signatory:"",signatoryTitle:"HR Manager",website:"",insurance:{company:"",policyNo:"",refId:"",benefits:"",docs:[]},carryCap:23,dailyHours:8,toilMult:3,weekdayMult:2,ticketCycle:12,logo:""}};
 let role="employee", currentUser="", currentEmail="";
@@ -387,15 +389,15 @@ const view=$("#view");
 const titles={dash:["Dashboard","Live view of the team"],emp:["Employees","Master records, compensation & compliance"],
   leave:["Leave","Annual & sick leave balances"],toil:["Overtime / TOIL","Overtime in lieu — weekday 2× / weekend 3×"],
   letters:["Letters","NOC, salary certificate & employment letters"],assets:["Assets","Company deliverables per employee"],
-  eos:["End of Service","Gratuity & final settlement (MOHRE)"],off:["Offboarding","Resignation / termination, clearance & final settlement"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],insurance:["Insurance","Medical insurance — provider, network & benefits"],perf:["Performance","Reviews, appraisals & KPI scorecards"],org:["Organization","How CoreV | OxeFit operates today"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],tickets:["Annual Tickets","Air-ticket entitlement, due dates & liability"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"],features:["Key Features","What this portal does — current as of v3.5"]};
+  eos:["End of Service","Gratuity & final settlement (MOHRE)"],off:["Offboarding","Resignation / termination, clearance & final settlement"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],insurance:["Insurance","Medical insurance — provider, network & benefits"],companydocs:["Company Docs","Trade License, VAT, Establishment Card & official records"],marketing:["Marketing","Printed materials & marketing collateral archive"],perf:["Performance","Reviews, appraisals & KPI scorecards"],org:["Organization","How CoreV | OxeFit operates today"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],tickets:["Annual Tickets","Air-ticket entitlement, due dates & liability"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"],features:["Key Features","What this portal does — current as of v3.5"]};
 let cur="dash";
 
 function isHR(){return role==="admin"||role==="full";}
 function isAdmin(){return role==="admin";}
 /* ---------- rule-based access (role x tab: hide/read/write) ---------- */
-const TABS=[["dash","Dashboard"],["emp","Employees"],["org","Organization"],["docs","Documents"],["assets","Assets"],["leave","Leave"],["toil","Overtime / TOIL"],["salary","Monthly Salaries"],["tickets","Annual Tickets"],["iloe","ILOE"],["insurance","Insurance"],["letters","Letters"],["eos","End of Service"],["off","Offboarding"],["perf","Performance"],["handbook","Company Handbook"],["settings","Settings"],["features","Key Features"]];
+const TABS=[["dash","Dashboard"],["emp","Employees"],["org","Organization"],["docs","Documents"],["assets","Assets"],["leave","Leave"],["toil","Overtime / TOIL"],["salary","Monthly Salaries"],["tickets","Annual Tickets"],["iloe","ILOE"],["insurance","Insurance"],["companydocs","Company Docs"],["marketing","Marketing"],["letters","Letters"],["eos","End of Service"],["off","Offboarding"],["perf","Performance"],["handbook","Company Handbook"],["settings","Settings"],["features","Key Features"]];
 const ROLES=[["admin","Admin"],["full","Full access"],["employee","Employee"]];
-function PERM_DEFAULTS(){const d={admin:{},full:{},employee:{}};const empWrite=["leave","iloe","letters","perf"];const empHide=["salary","tickets","settings","eos","docs"];
+function PERM_DEFAULTS(){const d={admin:{},full:{},employee:{}};const empWrite=["leave","iloe","letters","perf"];const empHide=["salary","tickets","settings","eos","docs","companydocs"];
  TABS.forEach(([t])=>{d.admin[t]="write";d.full[t]=(t==="settings")?"hide":"write";d.employee[t]=empHide.includes(t)?"hide":(empWrite.includes(t)?"write":"read");});return d;}
 function effectivePerm(r,t){if(r==="admin")return "write";const P=S.settings&&S.settings.perms;const v=P&&P[r]&&P[r][t];return v||PERM_DEFAULTS()[r][t]||"read";}
 function permRank(p){return p==="write"?2:(p==="read"?1:0);}
@@ -423,7 +425,7 @@ function visibleEmps(){return isHR()?S.employees:S.employees.filter(e=>e.id===se
 function syncNavGroups(){document.querySelectorAll(".navgroup").forEach(g=>{if(g.querySelector(".nav.on"))g.classList.add("open");});}
 function setView(v){if(typeof canRead==="function"&&!canRead(v))v="dash";cur=v;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("on",n.dataset.v===v));syncNavGroups();
   $("#vTitle").textContent=titles[v][0]; $("#vSub").textContent= v==="toil"? ("Overtime in lieu — weekday "+(S.settings.weekdayMult||2)+"× / weekend "+(S.settings.toilMult||3)+"×") : titles[v][1];
-  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,off:rOff,iloe:rIloe,insurance:rInsurance,perf:rPerf,org:rOrg,handbook:rHandbook,salary:rSalary,tickets:rTickets,docs:rDocs,settings:rSettings,features:rKeyFeatures})[v]();applyPerms();}
+  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,off:rOff,iloe:rIloe,insurance:rInsurance,companydocs:rCompanyDocs,marketing:rMarketing,perf:rPerf,org:rOrg,handbook:rHandbook,salary:rSalary,tickets:rTickets,docs:rDocs,settings:rSettings,features:rKeyFeatures})[v]();applyPerms();}
 
 function statusBadge(e){const m={Active:"b-green",Probation:"b-amber",Notice:"b-amber",Exited:"b-grey"};return `<span class="badge ${m[e.status]||'b-grey'}"><span class="dot" style="background:currentColor"></span>${e.status}</span>`;}
 function expBadge(days){if(days<0)return`<span class="badge b-red">Expired ${-days}d</span>`;if(days<=30)return`<span class="badge b-red">${days}d left</span>`;if(days<=60)return`<span class="badge b-amber">${days}d left</span>`;return`<span class="badge b-green">${days}d</span>`;}
@@ -452,6 +454,12 @@ function rDash(){
       ${onLeave.map(l=>{const e=S.employees.find(e=>e.id===l.emp);return`<tr><td class="emp-name">${e?e.name:'—'}</td><td><span class="badge b-teal">${l.type}</span></td><td class="mono">${prettyD(l.start)}</td><td class="mono">${prettyD(l.end)}</td></tr>`}).join("")}
       </tbody></table>`:`<div class="empty">Nobody is on leave today.</div>`}</div>
    ${(()=>{const unpaid=S.leaves.filter(l=>l.status!=="Rejected"&&(l.type==="Unpaid"||(l.type==="Emergency"&&!l.paid))).filter(l=>isHR()||l.emp===selfId());return unpaid.length?`<div class="sec-h"><h2>Unpaid leave \u2014 flagged</h2></div><div class="tablewrap"><table><thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Status</th></tr></thead><tbody>${unpaid.map(l=>{const e=S.employees.find(e=>e.id===l.emp);return`<tr><td class="emp-name">${e?e.name:'—'}</td><td><span class="badge b-grey">${l.type==="Emergency"?"Emergency (unpaid)":"Unpaid"}</span></td><td class="mono">${prettyD(l.start)}</td><td class="mono">${prettyD(l.end)}</td><td><span class="badge ${l.status==='Approved'?'b-green':l.status==='Rejected'?'b-red':'b-amber'}">${l.status}</span></td></tr>`}).join("")}</tbody></table></div>`:'';})()}
+   ${(()=>{ if(!isHR())return ''; const ds=(S.companyDocs||[]).map(d=>({d,days:d.expiry?daysBetween(today(),D(d.expiry)):null})).filter(x=>x.days!=null&&x.days<=60).sort((a,b)=>a.days-b.days); if(!ds.length)return '';
+     const rows=ds.map(x=>`<tr><td><b>${x.d.docType||x.d.name||'\u2014'}</b>${x.d.name&&x.d.docType?(' <span class="muted">'+x.d.name+'</span>'):''}</td><td class="mono">${prettyD(x.d.expiry)}</td><td><span class="badge ${x.days<0?'b-red':(x.days<=30?'b-amber':'b-grey')}">${x.days<0?(-x.days)+'d overdue':'in '+x.days+'d'}</span></td></tr>`).join("");
+     return `<div class="sec-h"><h2>Company documents \u2014 expiring</h2></div><div class="tablewrap"><table><thead><tr><th>Document</th><th>Expiry</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;})()}
+   ${(()=>{ const emps=isHR()?S.employees.filter(e=>e.status!=="Exited"):S.employees.filter(e=>e.id===selfId()); if(!emps.length)return '';
+     const rows=emps.map(e=>{const sm=leaveSumYear(e);return `<tr data-n="${(e.name||'').toLowerCase()}"><td class="emp-name">${e.name}</td><td class="right mono">${fmt1(sm.annualTaken)} / ${fmt1(sm.annualBal)}</td><td class="right mono">${sm.sick}</td><td class="right mono">${sm.unpaid}</td></tr>`;}).join("");
+     return `<div class="sec-h"><h2>Leave summary \u00b7 ${today().getFullYear()}</h2>${isHR()?`<input id="lsFilter" placeholder="Filter by name\u2026" oninput="filterLeaveSummary(this.value)" style="max-width:200px">`:''}</div><div class="tablewrap"><table><thead><tr><th>Employee</th><th class="right">Annual (taken / balance)</th><th class="right">Sick</th><th class="right">Unpaid</th></tr></thead><tbody id="lsBody">${rows}</tbody></table></div>`;})()}
    ${(()=>{ if(!isHR())return ''; const due=ticketsDueNow(); const liab=totalTicketLiability(); if(!due.length&&liab<1)return '';
      const rows=due.map(e=>{const d=ticketDueDays(e);const nd=ticketNextDue(e);return `<tr><td class="emp-name">\u2708 ${e.name}</td><td class="mono">${nd?prettyD(dateStr(nd)):'\u2014'}</td><td><span class="badge b-red">${d<0?(-d)+'d overdue':'Due now'}</span></td><td class="right mono">AED ${aed(e.ticketCost||0)}</td></tr>`;}).join("");
      return `<div class="sec-h"><h2>Annual ticket liability \u2014 AED ${aed(liab)}</h2></div>${due.length?`<div class="tablewrap"><table><thead><tr><th>Employee</th><th>Next due</th><th>Status</th><th class="right">Ticket cost</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No tickets due right now \u00b7 accrued liability AED ${aed(liab)}</div>`}`;})()}
@@ -512,6 +520,7 @@ function empView(id){
      <div><label>Visa type</label>${e.visaType||'—'}</div>
      <div><label>Nationality</label>${e.nationality||'—'}</div>
      <div><label>Date of birth</label>${e.dob?(prettyD(e.dob)+(ageOf(e)!=null?' · '+ageOf(e)+' yrs':'')):'—'}</div>
+     <div><label>Emirates ID number</label><span class="mono">${e.eidNo||'—'}</span></div>
    </div>
    ${isHR()?`<div class="card" style="margin-top:14px;background:#FBFAF6"><label>Compensation</label>
      <div class="flex" style="justify-content:space-between"><span class="muted">Basic</span><b class="mono">${aed(e.basic)}</b></div>
@@ -555,6 +564,7 @@ function empForm(id){
      <div><label>Visa type</label><input id="f_visaType" value="${f('visaType')}" placeholder="Employment"></div>
      <div><label>Passport no.</label><input id="f_passportNo" value="${f('passportNo')}"></div>
      <div><label>Visa expiry</label><input type="date" id="f_visaExpiry" value="${f('visaExpiry')}"></div>
+     <div><label>Emirates ID number</label><input id="f_eidNo" value="${f('eidNo')}" placeholder="784-XXXX-XXXXXXX-X"></div>
      <div><label>Emirates ID expiry</label><input type="date" id="f_eidExpiry" value="${f('eidExpiry')}"></div>
      <div><label>Passport expiry</label><input type="date" id="f_passportExpiry" value="${f('passportExpiry')}"></div>
      <div><label>Insurance expiry</label><input type="date" id="f_insExpiry" value="${f('insExpiry')}"></div>
@@ -569,7 +579,7 @@ function saveEmp(id){
   const g=k=>$("#f_"+k);
   if(!g("name").value||!g("start").value){alert("Name and start date are required.");return;}
   const obj={id:id||uid()};
-  ["name","empId","designation","department","status","nationality","dob","email","start","probationEnd","endDate","visaType","passportNo","visaExpiry","eidExpiry","passportExpiry","insExpiry"].forEach(k=>obj[k]=g(k).value);
+  ["name","empId","designation","department","status","nationality","dob","email","start","probationEnd","endDate","visaType","passportNo","eidNo","visaExpiry","eidExpiry","passportExpiry","insExpiry"].forEach(k=>obj[k]=g(k).value);
   ["basic","housing","transport","other","visaCost","insCost","ticketCost"].forEach(k=>obj[k]=+g(k).value||0);
   obj.ticket=g("ticket").checked;obj.misconduct=g("misconduct").checked;
   obj._ts=Date.now();if(id){const i=S.employees.findIndex(e=>e.id===id);S.employees[i]={...S.employees[i],...obj};}else S.employees.push(obj);
@@ -1321,6 +1331,88 @@ async function notifyTicketsDue(){const due=ticketsDueNow();if(!due.length)retur
  const ok=await sendMail(ADMIN_EMAILS,"\u2708 Annual tickets due \u2014 "+due.map(e=>e.name).join(", "),"The following employees are due their annual air ticket:\n\n"+due.map(e=>"- "+e.name+(e.ticketCost?(" (AED "+aed(e.ticketCost)+")"):"")).join("\n")+"\n\nPlease arrange and confirm payment in the Annual Tickets tab.\n\nCoreV | OxeFit HR portal");
  try{if(ok)localStorage.setItem(key,"1");}catch(_){}}
 
+/* ---------- Leave summary + shared upload + repositories ---------- */
+function leaveSumYear(e){
+  const yr=today().getFullYear();const inY=l=>{const d=D(l.start);return d&&d.getFullYear()===yr&&l.status==="Approved";};
+  const ab=annualBalance(e);
+  const sick=S.leaves.filter(l=>l.emp===e.id&&l.type==="Sick"&&inY(l)).reduce((s,l)=>s+daysIncl(l.start,l.end),0);
+  const unpaid=S.leaves.filter(l=>l.emp===e.id&&inY(l)&&(l.type==="Unpaid"||(l.type==="Emergency"&&!l.paid))).reduce((s,l)=>s+daysIncl(l.start,l.end),0);
+  return {annualTaken:ab.taken,annualBal:ab.balance,sick,unpaid};
+}
+function filterLeaveSummary(q){q=(q||"").trim().toLowerCase();document.querySelectorAll("#lsBody tr").forEach(tr=>{tr.style.display=(!q||(tr.dataset.n||"").includes(q))?"":"none";});}
+async function graphUploadTo(subfolder,file){
+  const tok=await getAccessToken();const fn=encodeURIComponent((subfolder+"-"+file.name).replace(/[^\w.\- ]/g,"_"));
+  const folder=ONEDRIVE_CONFIG.filePath.replace(/\/[^/]*$/,"");const upn=ONEDRIVE_CONFIG.sharedDriveUser;
+  const base=upn?`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:`:`https://graph.microsoft.com/v1.0/me/drive/root:`;
+  const res=await fetch(`${base}${folder}/${subfolder}/${fn}:/content`,{method:"PUT",headers:{Authorization:"Bearer "+tok,"Content-Type":file.type||"application/octet-stream"},body:file});
+  if(!res.ok)throw new Error("HTTP "+res.status);return await res.json();
+}
+function expBadge(date){if(!date)return '<span class="muted">no expiry</span>';const d=daysBetween(today(),D(date));return `<span class="badge ${d<0?'b-red':(d<=30?'b-amber':(d<=60?'b-grey':'b-green'))}">${d<0?(-d)+'d overdue':'in '+d+'d'}</span>`;}
+
+/* ----- Company documents repository ----- */
+function rCompanyDocs(){
+  const docs=(S.companyDocs||[]).slice().sort((a,b)=>(a.expiry||'9999').localeCompare(b.expiry||'9999'));
+  view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">Official company records \u2014 Trade License, VAT Certificate, Establishment Card and other documents. Add an expiry date and it will be flagged on the dashboard.</div>
+   <div class="sec-h"><h2>Company documents</h2>${isHR()?`<button class="btn p" onclick="companyDocForm()">+ Add document</button>`:''}</div>
+   <div class="tablewrap">${docs.length?`<table><thead><tr><th>Type</th><th>Name / ref</th><th>Expiry</th><th>Status</th><th class="right"></th></tr></thead><tbody>
+   ${docs.map(d=>`<tr><td><b>${d.docType||'\u2014'}</b></td><td>${d.name||'\u2014'}</td><td class="mono">${d.expiry?prettyD(d.expiry):'\u2014'}</td><td>${expBadge(d.expiry)}</td><td class="right">${d.webUrl?`<a class="btn g sm" href="${d.webUrl}" target="_blank">Open</a> `:''}${isHR()?`<button class="btn g sm" onclick="companyDocForm('${d.id}')">Edit</button><button class="btn danger sm" onclick="delItem('companyDocs','${d.id}','companydocs')">\u2715</button>`:''}</td></tr>`).join("")}
+   </tbody></table>`:`<div class="empty"><b>No company documents yet</b>Add the Trade License, VAT Certificate, Establishment Card and other official records.</div>`}</div>`;
+}
+function companyDocForm(id){
+  if(!isHR()){alert("Only HR/admin can manage company documents.");return;}
+  const d=id?S.companyDocs.find(x=>x.id===id):null;
+  const types=["Trade License","VAT Certificate","Establishment Card","Chamber of Commerce","Tenancy / Ejari","Memorandum of Association","Immigration Card","Other"];
+  modal(id?"Edit company document":"Add company document",`<div class="fgrid">
+     <div><label>Type *</label><select id="cd_type">${types.map(t=>`<option ${d&&d.docType===t?'selected':''}>${t}</option>`).join("")}</select></div>
+     <div><label>Name / reference</label><input id="cd_name" value="${(d&&d.name)||''}" placeholder="e.g. TL 123456"></div>
+     <div><label>Expiry date</label><input type="date" id="cd_expiry" value="${(d&&d.expiry)||''}"></div>
+     <div><label>${d&&d.webUrl?'Replace file':'File'}</label><input type="file" id="cd_file"></div>
+   </div><div class="hint">${d&&d.webUrl?'A file is already attached \u2014 choose a new one only to replace it.':'PDF or image, stored in the shared OXEFIT/Company folder.'}</div>`,
+   [["Cancel","closeModal()","g"],[id?"Save":"Add document","saveCompanyDoc('"+(id||'')+"')","p"]]);
+}
+async function saveCompanyDoc(id){
+  if(!isHR())return;
+  const docType=$("#cd_type").value,name=$("#cd_name").value,expiry=$("#cd_expiry").value;
+  const file=$("#cd_file")&&$("#cd_file").files&&$("#cd_file").files[0];
+  let up;
+  if(file){ if(!msalAccount){flash("Sign in with Microsoft to upload the file.");} else { flash("Uploading\u2026"); try{const item=await graphUploadTo("Company",file);up={webUrl:item.webUrl||"",itemId:item.id||"",fileName:file.name};}catch(e){flash("Upload failed (check shared-drive access)");return;} } }
+  if(id){const r=S.companyDocs.find(x=>x.id===id);if(r){Object.assign(r,{docType,name,expiry,_ts:Date.now()});if(up)Object.assign(r,up);}}
+  else{const r={id:uid(),docType,name,expiry,by:currentUser,at:new Date().toISOString(),_ts:Date.now()};if(up)Object.assign(r,up);S.companyDocs.push(r);}
+  dbSet();closeModal();setView("companydocs");flash("Company document saved");
+}
+
+/* ----- Marketing & printed materials archive ----- */
+function rMarketing(){
+  const items=(S.marketing||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||''));
+  view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">Archive of printed & marketing materials \u2014 booklets, flyers, business cards, brochures and other collateral.</div>
+   <div class="sec-h"><h2>Marketing & printed materials</h2>${isHR()?`<button class="btn p" onclick="marketingForm()">+ Add material</button>`:''}</div>
+   <div class="tablewrap">${items.length?`<table><thead><tr><th>Category</th><th>Name</th><th>Added</th><th class="right"></th></tr></thead><tbody>
+   ${items.map(m=>`<tr><td><span class="badge b-grey">${m.category||'Other'}</span></td><td><b>${m.name||m.fileName||'\u2014'}</b></td><td class="mono">${m.at?prettyD(m.at.slice(0,10)):'\u2014'}</td><td class="right">${m.webUrl?`<a class="btn g sm" href="${m.webUrl}" target="_blank">Open / download</a> `:''}${isHR()?`<button class="btn danger sm" onclick="delItem('marketing','${m.id}','marketing')">\u2715</button>`:''}</td></tr>`).join("")}
+   </tbody></table>`:`<div class="empty"><b>No materials yet</b>${isHR()?'Upload booklets, flyers, business cards and brochures.':'Ask the marketing/admin team to upload collateral here.'}</div>`}</div>`;
+}
+function marketingForm(){
+  if(!isHR()){alert("Only HR/admin can add materials.");return;}
+  const cats=["Booklet","Flyer","Business card","Brochure","Banner","Poster","Catalogue","Other"];
+  modal("Add marketing material",`<div class="fgrid">
+     <div><label>Category *</label><select id="mk_cat">${cats.map(c=>`<option>${c}</option>`).join("")}</select></div>
+     <div><label>Name</label><input id="mk_name" placeholder="e.g. OxeFit product brochure 2026"></div>
+     <div class="full"><label>File *</label><input type="file" id="mk_file"></div>
+   </div><div class="hint">Stored in the shared OXEFIT/Marketing folder for the team to download.</div>`,
+   [["Cancel","closeModal()","g"],["Add material","saveMarketing()","p"]]);
+}
+async function saveMarketing(){
+  if(!isHR())return;
+  const category=$("#mk_cat").value,name=$("#mk_name").value;
+  const file=$("#mk_file")&&$("#mk_file").files&&$("#mk_file").files[0];
+  if(!file){alert("Please choose a file.");return;}
+  if(!msalAccount){flash("Sign in with Microsoft to upload shared files.");return;}
+  flash("Uploading\u2026");
+  try{const item=await graphUploadTo("Marketing",file);
+    S.marketing.push({id:uid(),category,name:name||file.name,fileName:file.name,webUrl:item.webUrl||"",itemId:item.id||"",by:currentUser,at:new Date().toISOString(),_ts:Date.now()});
+    dbSet();closeModal();setView("marketing");flash("Material uploaded");
+  }catch(e){flash("Upload failed (check shared-drive access)");}
+}
+
 /* ---------- Insurance ---------- */
 function rInsurance(){
   const ins=S.settings.insurance||{docs:[]};const docs=ins.docs||[];
@@ -1634,7 +1726,7 @@ async function getAccessToken(){
 }
 let _fileRef=null,_accessError=false;
 const _fileName=(ONEDRIVE_CONFIG.filePath.split("/").pop()||"corev-hr.json").toLowerCase();
-const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns"];
+const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing"];
 function driveRootUrl(){const upn=ONEDRIVE_CONFIG.sharedDriveUser;
   if(upn)return `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;
   return `https://graph.microsoft.com/v1.0/me/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;}
