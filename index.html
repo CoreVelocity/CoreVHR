@@ -236,7 +236,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.19<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.20<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -438,15 +438,16 @@ function rDash(){
   const onLeave=S.leaves.filter(l=>l.status==="Approved"&&D(l.start)<=today()&&D(l.end)>=today());
   const pending=S.letters.filter(l=>l.status!=="Issued"&&l.status!=="Rejected");
   const totalGrat=emps.reduce((s,e)=>s+gratuity(e),0);
-  const _todB=birthdaysToday(),_upB=upcomingBirthdays(30);
-  const nextB=_todB.length?{name:_todB.map(e=>(e.name||'').split(' ')[0]).join(', '),days:0}:(_upB.length?{name:(_upB[0].e.name||'').split(' ')[0],days:_upB[0].in}:null);
+  const _anyDob=S.employees.some(e=>e.status!=='Exited'&&e.dob);
+  const _todB=birthdaysToday(),_upB=upcomingBirthdays(366);
+  const nextB=_todB.length?{name:_todB.map(e=>(e.name||'').split(' ')[0]).join(', '),days:0,date:dateStr(today())}:(_upB.length?{name:(_upB[0].e.name||'').split(' ')[0],days:_upB[0].in,date:dateStr(_upB[0].d)}:null);
   view.innerHTML=`
    <div class="grid cards">
      <div class="card stat"><div class="k">Headcount</div><div class="v">${emps.length}</div><div class="sub">${emps.filter(e=>e.status==="Active").length} active · ${emps.filter(e=>e.status==="Probation").length} on probation</div></div>
      <div class="card stat"><div class="k">Expiries ≤60d</div><div class="v" style="color:${allExp.length?'var(--amber)':'var(--green)'}">${allExp.length}</div><div class="sub">${allExp.filter(x=>x.days<=30).length} urgent (≤30 days)</div></div>
      <div class="card stat"><div class="k">On leave today</div><div class="v">${onLeave.length}</div><div class="sub">${pending.length} letter request(s) pending</div></div>
      ${isHR()?`<div class="card stat"><div class="k">Gratuity liability</div><div class="v" style="font-size:24px">${aed(totalGrat)}</div><div class="sub">Accrued across team to date</div></div>`:''}
-     ${isHR()?`<div class="card stat" style="${nextB&&nextB.days<=7?'background:var(--teal-wash);border-color:#C3C9EC':''}"><div class="k">Upcoming birthday</div><div class="v" style="font-size:18px;color:var(--teal)">${nextB?(nextB.days===0?'\ud83c\udf82 '+nextB.name:nextB.name):'\u2014'}</div><div class="sub">${nextB?(nextB.days===0?'celebrate today!':'in '+nextB.days+' day'+(nextB.days===1?'':'s')):'none in 30 days'}</div></div>`:''}
+     ${isHR()?`<div class="card stat" style="${nextB&&nextB.days<=7?'background:var(--teal-wash);border-color:#C3C9EC':''}"><div class="k">Upcoming birthday</div><div class="v" style="font-size:18px;color:var(--teal)">${nextB?(nextB.days===0?'\ud83c\udf82 '+nextB.name:nextB.name):'\u2014'}</div><div class="sub">${nextB?(nextB.days===0?'celebrate today!':prettyD(nextB.date)+' \u00b7 in '+nextB.days+' day'+(nextB.days===1?'':'s')):(_anyDob?'no birthdays on file':'add date of birth to employees')}</div></div>`:''}
    </div>
    <div class="sec-h"><h2>Compliance — upcoming expiries</h2></div>
    <div class="tablewrap">${allExp.length?`<table><thead><tr><th>Employee</th><th>Document</th><th>Expiry date</th><th class="right">Status</th></tr></thead><tbody>
