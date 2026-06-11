@@ -236,7 +236,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.16<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.17<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -629,7 +629,7 @@ function rLeave(){
       const tag=l.type==="Emergency"?` <span class="tag">${l.paid?'paid':'unpaid'}</span>`:(l.type==="Unpaid"?' <span class="tag">unpaid</span>':'');
       const cert=l.type==="Sick"?(l.cert?' <span class="badge b-green">report \u2713</span>':` <span class="badge b-red">report due</span>`):'';
       const canDecide=isHR()&&l.status==="Requested";
-      return `<tr><td class="emp-name">${e?e.name:'—'}</td><td><span class="badge ${m[l.type]||'b-grey'}">${l.type}</span>${tag}</td><td class="mono">${prettyD(l.start)}</td><td class="mono">${prettyD(l.end)}</td><td>${leaveDays(l)}${(l.type==="Annual"||(l.type==="Emergency"&&l.paid))?' wd':''}</td><td><span class="badge ${l.status==='Approved'?'b-green':l.status==='Rejected'?'b-red':'b-amber'}">${l.status}</span>${cert}</td>${(isHR()||l.emp===selfId())?`<td class="row-act">${canDecide?`<button class="btn p sm" onclick="decideLeave('${l.id}','Approved')">Approve</button><button class="btn danger sm" onclick="decideLeave('${l.id}','Rejected')">Reject</button>`:''}${(l.type==="Sick"&&!l.cert&&(isHR()||l.emp===selfId()))?`<button class="btn g sm" onclick="markCert('${l.id}')">Report ✓</button>`:''}${(isHR()||(l.emp===selfId()&&l.status==="Requested"))?`<button class="btn g sm" onclick="leaveForm('${l.id}')">Edit</button>`:''}${isHR()?`<button class="btn danger sm" onclick="delItem('leaves','${l.id}','leave')">✕</button>`:''}</td>`:''}</tr>`}).join("")}
+      return `<tr><td class="emp-name">${e?e.name:'—'}</td><td><span class="badge ${m[l.type]||'b-grey'}">${l.type}</span>${tag}</td><td class="mono">${prettyD(l.start)}</td><td class="mono">${prettyD(l.end)}</td><td>${leaveDays(l)}${(l.type==="Annual"||(l.type==="Emergency"&&l.paid))?' wd':''}</td><td><span class="badge ${l.status==='Approved'?'b-green':l.status==='Rejected'?'b-red':'b-amber'}">${l.status}</span>${cert}</td>${(isHR()||l.emp===selfId())?`<td class="row-act">${canDecide?`<button class="btn p sm" onclick="decideLeave('${l.id}','Approved')">Approve</button><button class="btn danger sm" onclick="decideLeave('${l.id}','Rejected')">Reject</button>`:''}${(l.type==="Sick"&&(isHR()||l.emp===selfId()))?(l.cert?`<button class="btn g sm" onclick="revertCert('${l.id}')">Undo report</button>`:`<button class="btn g sm" onclick="markCert('${l.id}')">Report ✓</button>`):''}${(isHR()||(l.emp===selfId()&&l.status==="Requested"))?`<button class="btn g sm" onclick="leaveForm('${l.id}')">Edit</button>`:''}${isHR()?`<button class="btn danger sm" onclick="delItem('leaves','${l.id}','leave')">✕</button>`:''}</td>`:''}</tr>`}).join("")}
    </tbody></table>`:`<div class="empty">No leave logged yet.</div>`}</div>`;
 }
 function leaveForm(id){
@@ -651,6 +651,7 @@ function leaveForm(id){
 }
 function leaveTypeChange(){const t=$("#f_type")&&$("#f_type").value;const pw=$("#f_paidWrap"),sh=$("#f_sickHint");if(pw)pw.style.display=(t==="Emergency")?"":"none";if(sh)sh.style.display=(t==="Sick")?"":"none";}
 function markCert(id){const l=S.leaves.find(x=>x.id===id);if(!l)return;if(!(isHR()||l.emp===selfId())){alert("Only the employee or HR can do this.");return;}l.cert=true;l._ts=Date.now();dbSet();closeModal();setView(cur);flash("Medical report marked as submitted");}
+function revertCert(id){const l=S.leaves.find(x=>x.id===id);if(!l)return;if(!(isHR()||l.emp===selfId())){alert("Only the employee or HR can do this.");return;}if(!confirm("Revert the medical report for this sick leave? It will be flagged as outstanding again."))return;l.cert=false;l._ts=Date.now();dbSet();closeModal();setView(cur);flash("Medical report reverted \u2014 flagged as outstanding");}
 function remindCerts(){
   const list=myOutstandingCerts(); if(!list.length)return;
   if(document.querySelector("#scrim.show"))return;
