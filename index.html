@@ -220,6 +220,7 @@ tbody tr:hover{background:#FCFBF7}
         <div class="nav" data-v="insurance">Insurance</div>
         <div class="nav" data-v="companydocs">Company Docs</div>
         <div class="nav" data-v="marketing">Marketing</div>
+        <div class="nav" data-v="suppliers">Suppliers</div>
         <div class="nav" data-v="letters">Letters <small id="navLetters" style="display:none"></small></div>
         <div class="nav" data-v="eos">End of Service</div>
         <div class="nav" data-v="off">Offboarding</div>
@@ -236,7 +237,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.21<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.22<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -257,7 +258,7 @@ tbody tr:hover{background:#FCFBF7}
 
 <script>
 /* ============ config: Microsoft SSO + OneDrive shared sync ============ */
-const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing","tombstones","settings"];
+const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing","suppliers","tombstones","settings"];
 const ONEDRIVE_CONFIG = {
   clientId   : 'cd1b7f5f-5ff9-4066-ab4f-06f270a94fcb',          // same Azure app as the working Sales/Delivery tracker
   authority  : 'https://login.microsoftonline.com/core-velocity.com',
@@ -275,7 +276,7 @@ const ROLE_MAP = {
 };
 function roleForEmail(e){return ROLE_MAP[(e||'').toLowerCase().trim()]||'employee';}
 
-let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],offboardings:[],tickets:[],payruns:[],companyDocs:[],marketing:[],tombstones:{},
+let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],offboardings:[],tickets:[],payruns:[],companyDocs:[],marketing:[],suppliers:[],tombstones:{},
   settings:{companyName:"CoreV | OxeFit",tradeLicense:"",address:"Dubai, United Arab Emirates",phone:"",
     signatory:"",signatoryTitle:"HR Manager",website:"",insurance:{company:"",policyNo:"",refId:"",benefits:"",docs:[]},carryCap:23,dailyHours:8,toilMult:3,weekdayMult:2,ticketCycle:12,logo:""}};
 let role="employee", currentUser="", currentEmail="";
@@ -389,15 +390,15 @@ const view=$("#view");
 const titles={dash:["Dashboard","Live view of the team"],emp:["Employees","Master records, compensation & compliance"],
   leave:["Leave","Annual & sick leave balances"],toil:["Overtime / TOIL","Overtime in lieu — weekday 2× / weekend 3×"],
   letters:["Letters","NOC, salary certificate & employment letters"],assets:["Assets","Company deliverables per employee"],
-  eos:["End of Service","Gratuity & final settlement (MOHRE)"],off:["Offboarding","Resignation / termination, clearance & final settlement"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],insurance:["Insurance","Medical insurance — provider, network & benefits"],companydocs:["Company Docs","Trade License, VAT, Establishment Card & official records"],marketing:["Marketing","Printed materials & marketing collateral archive"],perf:["Performance","Reviews, appraisals & KPI scorecards"],org:["Organization","How CoreV | OxeFit operates today"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],tickets:["Annual Tickets","Air-ticket entitlement, due dates & liability"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"],features:["Key Features","What this portal does — current as of v3.5"]};
+  eos:["End of Service","Gratuity & final settlement (MOHRE)"],off:["Offboarding","Resignation / termination, clearance & final settlement"],iloe:["ILOE","Involuntary Loss of Employment — subscription & compliance"],insurance:["Insurance","Medical insurance — provider, network & benefits"],companydocs:["Company Docs","Trade License, VAT, Establishment Card & official records"],marketing:["Marketing","Printed materials & marketing collateral archive"],suppliers:["Suppliers","Office suppliers & vendors — spend, contacts & agreements"],perf:["Performance","Reviews, appraisals & KPI scorecards"],org:["Organization","How CoreV | OxeFit operates today"],handbook:["Company Handbook","Policies & compliance reference (effective 01 Sep 2025)"],salary:["Monthly Salaries","Payroll & cost per employee"],tickets:["Annual Tickets","Air-ticket entitlement, due dates & liability"],docs:["Documents","Passport, EID, visa, insurance & MOHRE card files"],settings:["Settings","Company details & policy"],features:["Key Features","What this portal does — current as of v3.5"]};
 let cur="dash";
 
 function isHR(){return role==="admin"||role==="full";}
 function isAdmin(){return role==="admin";}
 /* ---------- rule-based access (role x tab: hide/read/write) ---------- */
-const TABS=[["dash","Dashboard"],["emp","Employees"],["org","Organization"],["docs","Documents"],["assets","Assets"],["leave","Leave"],["toil","Overtime / TOIL"],["salary","Monthly Salaries"],["tickets","Annual Tickets"],["iloe","ILOE"],["insurance","Insurance"],["companydocs","Company Docs"],["marketing","Marketing"],["letters","Letters"],["eos","End of Service"],["off","Offboarding"],["perf","Performance"],["handbook","Company Handbook"],["settings","Settings"],["features","Key Features"]];
+const TABS=[["dash","Dashboard"],["emp","Employees"],["org","Organization"],["docs","Documents"],["assets","Assets"],["leave","Leave"],["toil","Overtime / TOIL"],["salary","Monthly Salaries"],["tickets","Annual Tickets"],["iloe","ILOE"],["insurance","Insurance"],["companydocs","Company Docs"],["marketing","Marketing"],["suppliers","Suppliers"],["letters","Letters"],["eos","End of Service"],["off","Offboarding"],["perf","Performance"],["handbook","Company Handbook"],["settings","Settings"],["features","Key Features"]];
 const ROLES=[["admin","Admin"],["full","Full access"],["employee","Employee"]];
-function PERM_DEFAULTS(){const d={admin:{},full:{},employee:{}};const empWrite=["leave","iloe","letters","perf"];const empHide=["salary","settings","eos","companydocs"];
+function PERM_DEFAULTS(){const d={admin:{},full:{},employee:{}};const empWrite=["leave","iloe","letters","perf"];const empHide=["salary","settings","eos","companydocs","suppliers"];
  TABS.forEach(([t])=>{d.admin[t]="write";d.full[t]=(t==="settings")?"hide":"write";d.employee[t]=empHide.includes(t)?"hide":(empWrite.includes(t)?"write":"read");});return d;}
 function effectivePerm(r,t){if(r==="admin")return "write";const P=S.settings&&S.settings.perms;const v=P&&P[r]&&P[r][t];return v||PERM_DEFAULTS()[r][t]||"read";}
 function permRank(p){return p==="write"?2:(p==="read"?1:0);}
@@ -425,7 +426,7 @@ function visibleEmps(){return isHR()?S.employees:S.employees.filter(e=>e.id===se
 function syncNavGroups(){document.querySelectorAll(".navgroup").forEach(g=>{if(g.querySelector(".nav.on"))g.classList.add("open");});}
 function setView(v){if(typeof canRead==="function"&&!canRead(v))v="dash";cur=v;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("on",n.dataset.v===v));syncNavGroups();
   $("#vTitle").textContent=titles[v][0]; $("#vSub").textContent= v==="toil"? ("Overtime in lieu — weekday "+(S.settings.weekdayMult||2)+"× / weekend "+(S.settings.toilMult||3)+"×") : titles[v][1];
-  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,off:rOff,iloe:rIloe,insurance:rInsurance,companydocs:rCompanyDocs,marketing:rMarketing,perf:rPerf,org:rOrg,handbook:rHandbook,salary:rSalary,tickets:rTickets,docs:rDocs,settings:rSettings,features:rKeyFeatures})[v]();applyPerms();}
+  ({dash:rDash,emp:rEmp,leave:rLeave,toil:rToil,letters:rLetters,assets:rAssets,eos:rEos,off:rOff,iloe:rIloe,insurance:rInsurance,companydocs:rCompanyDocs,marketing:rMarketing,suppliers:rSuppliers,perf:rPerf,org:rOrg,handbook:rHandbook,salary:rSalary,tickets:rTickets,docs:rDocs,settings:rSettings,features:rKeyFeatures})[v]();applyPerms();}
 
 function statusBadge(e){const m={Active:"b-green",Probation:"b-amber",Notice:"b-amber",Exited:"b-grey"};return `<span class="badge ${m[e.status]||'b-grey'}"><span class="dot" style="background:currentColor"></span>${e.status}</span>`;}
 function expBadge(days){if(days<0)return`<span class="badge b-red">Expired ${-days}d</span>`;if(days<=30)return`<span class="badge b-red">${days}d left</span>`;if(days<=60)return`<span class="badge b-amber">${days}d left</span>`;return`<span class="badge b-green">${days}d</span>`;}
@@ -1405,6 +1406,49 @@ async function saveCompanyDoc(id){
 }
 
 /* ----- Marketing & printed materials archive ----- */
+function rSuppliers(){
+  const list=(S.suppliers||[]).slice().sort((a,b)=>((a.business||a.name||'').toLowerCase()).localeCompare((b.business||b.name||'').toLowerCase()));
+  const totalMonthly=list.reduce((s,x)=>s+(+x.monthlyExpense||0),0);
+  view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">Office suppliers & vendors \u2014 business details, monthly spend, bank details, contacts and agreement renewals.</div>
+   <div class="grid cards" style="margin-bottom:6px">
+     <div class="card stat"><div class="k">Suppliers</div><div class="v">${list.length}</div></div>
+     <div class="card stat"><div class="k">Total monthly spend</div><div class="v" style="font-size:23px;color:var(--teal)">AED ${aed(totalMonthly)}</div><div class="sub">across all suppliers</div></div>
+   </div>
+   <div class="sec-h"><h2>Suppliers</h2>${isHR()?`<button class="btn p" onclick="supplierForm()">+ Add supplier</button>`:''}</div>
+   ${list.length?list.map(x=>`<div class="card" style="margin-bottom:10px">
+       <div class="flex" style="justify-content:space-between;align-items:flex-start"><div><b class="emp-name">${x.business||x.name||'\u2014'}</b>${x.name&&x.business?` <span class="tag">${x.name}</span>`:''}</div><div>${x.agreementExpiry?expBadge(x.agreementExpiry):'<span class="muted">no agreement date</span>'}${isHR()?` <button class="btn g sm" onclick="supplierForm('${x.id}')">Edit</button><button class="btn danger sm" onclick="delItem('suppliers','${x.id}','suppliers')">\u2715</button>`:''}</div></div>
+       <div class="fgrid" style="margin-top:12px">
+         <div><label>Monthly expense</label><b class="mono">AED ${aed(+x.monthlyExpense||0)}</b></div>
+         <div><label>Contact number</label><span class="mono">${x.contact||'\u2014'}</span></div>
+         <div><label>Agreement expiry</label><span class="mono">${x.agreementExpiry?prettyD(x.agreementExpiry):'\u2014'}</span></div>
+         <div class="full"><label>Address</label>${x.address||'\u2014'}</div>
+         <div class="full"><label>Bank details</label><span class="mono">${(x.bankDetails||'\u2014').replace(/</g,'&lt;')}</span></div>
+       </div></div>`).join("")
+     :`<div class="empty"><b>No suppliers yet</b>${isHR()?'Add your office suppliers and vendors with their spend and agreement details.':'Ask admin to add suppliers.'}</div>`}`;
+}
+function supplierForm(id){
+  if(!isHR()){alert("Only admin/full-access users can manage suppliers.");return;}
+  const x=id?S.suppliers.find(o=>o.id===id):null;
+  modal(id?"Edit supplier":"Add supplier",`<div class="fgrid">
+     <div><label>Business name *</label><input id="sp_business" value="${(x&&x.business)||''}" placeholder="e.g. Gulf Stationery LLC"></div>
+     <div><label>Contact name</label><input id="sp_name" value="${(x&&x.name)||''}" placeholder="person / rep"></div>
+     <div><label>Contact number</label><input id="sp_contact" value="${(x&&x.contact)||''}" placeholder="+971 \u2026"></div>
+     <div><label>Monthly expense (AED)</label><input type="number" id="sp_monthly" value="${(x&&x.monthlyExpense)||''}"></div>
+     <div><label>Agreement expiry</label><input type="date" id="sp_expiry" value="${(x&&x.agreementExpiry)||''}"></div>
+     <div class="full"><label>Address</label><input id="sp_address" value="${(x&&x.address)||''}"></div>
+     <div class="full"><label>Bank details</label><textarea id="sp_bank" rows="2" style="width:100%" placeholder="Bank, account name, IBAN, account no.">${(x&&x.bankDetails)||''}</textarea></div>
+   </div><div class="hint">Bank details and supplier records are visible to admin & full-access users only.</div>`,
+   [["Cancel","closeModal()","g"],[id?"Save":"Add supplier","saveSupplier('"+(id||'')+"')","p"]]);
+}
+function saveSupplier(id){
+  if(!isHR())return;
+  const business=$("#sp_business").value.trim(),name=$("#sp_name").value.trim();
+  if(!business&&!name){alert("Please enter at least a business or contact name.");return;}
+  const o={business,name,contact:$("#sp_contact").value,monthlyExpense:+$("#sp_monthly").value||0,agreementExpiry:$("#sp_expiry").value,address:$("#sp_address").value,bankDetails:$("#sp_bank").value,_ts:Date.now()};
+  if(id){const r=S.suppliers.find(z=>z.id===id);if(r)Object.assign(r,o);}
+  else{S.suppliers.push(Object.assign({id:uid(),by:currentUser,at:new Date().toISOString()},o));}
+  dbSet();closeModal();setView("suppliers");flash("Supplier saved");
+}
 function rMarketing(){
   const items=(S.marketing||[]).slice().sort((a,b)=>(b.at||'').localeCompare(a.at||''));
   view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">Archive of printed & marketing materials \u2014 booklets, flyers, business cards, brochures and other collateral.</div>
@@ -1750,7 +1794,7 @@ async function getAccessToken(){
 }
 let _fileRef=null,_accessError=false;
 const _fileName=(ONEDRIVE_CONFIG.filePath.split("/").pop()||"corev-hr.json").toLowerCase();
-const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing"];
+const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing","suppliers"];
 function driveRootUrl(){const upn=ONEDRIVE_CONFIG.sharedDriveUser;
   if(upn)return `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;
   return `https://graph.microsoft.com/v1.0/me/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;}
