@@ -236,7 +236,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.17<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.18<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -985,7 +985,7 @@ function emailAllPayslips(m){if(!isMonthConfirmed(m)){alert("Confirm the payroll
   (async()=>{let n=0;for(const e of list){const ok=await sendMailHtml(e.email,"Your payslip \u2014 "+MONTHN[mm-1]+" "+yy,payslipInline(e,m));if(ok)n++;}flash("Payslips emailed: "+n+"/"+list.length);})();}
 
 /* ---------- Documents (admin & full) ---------- */
-const DOC_TYPES=["Passport","Emirates ID","Visa","Insurance","MOHRE card"];
+const DOC_TYPES=["Passport","Emirates ID","Visa","Insurance","MOHRE card","Signed contract","Offer letter / proposal","Other"];
 /* ---------- ILOE compliance (self-service) ---------- */
 function iloeCategory(e){return (e.basic||0)<=16000 ? "A (basic \u2264 AED 16,000)" : "B (basic > AED 16,000)";}
 function iloeStatus(e){
