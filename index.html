@@ -236,7 +236,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.20<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.21<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -397,7 +397,7 @@ function isAdmin(){return role==="admin";}
 /* ---------- rule-based access (role x tab: hide/read/write) ---------- */
 const TABS=[["dash","Dashboard"],["emp","Employees"],["org","Organization"],["docs","Documents"],["assets","Assets"],["leave","Leave"],["toil","Overtime / TOIL"],["salary","Monthly Salaries"],["tickets","Annual Tickets"],["iloe","ILOE"],["insurance","Insurance"],["companydocs","Company Docs"],["marketing","Marketing"],["letters","Letters"],["eos","End of Service"],["off","Offboarding"],["perf","Performance"],["handbook","Company Handbook"],["settings","Settings"],["features","Key Features"]];
 const ROLES=[["admin","Admin"],["full","Full access"],["employee","Employee"]];
-function PERM_DEFAULTS(){const d={admin:{},full:{},employee:{}};const empWrite=["leave","iloe","letters","perf"];const empHide=["salary","tickets","settings","eos","docs","companydocs"];
+function PERM_DEFAULTS(){const d={admin:{},full:{},employee:{}};const empWrite=["leave","iloe","letters","perf"];const empHide=["salary","settings","eos","companydocs"];
  TABS.forEach(([t])=>{d.admin[t]="write";d.full[t]=(t==="settings")?"hide":"write";d.employee[t]=empHide.includes(t)?"hide":(empWrite.includes(t)?"write":"read");});return d;}
 function effectivePerm(r,t){if(r==="admin")return "write";const P=S.settings&&S.settings.perms;const v=P&&P[r]&&P[r][t];return v||PERM_DEFAULTS()[r][t]||"read";}
 function permRank(p){return p==="write"?2:(p==="read"?1:0);}
@@ -641,7 +641,7 @@ function leaveForm(id){
   if(l&&!(isHR()||(l.emp===selfId()&&l.status==="Requested"))){alert("You can only edit your own pending requests.");return;}
   const types=["Annual","Sick","Emergency","Unpaid","Maternity","Other"];
   modal(id?"Edit leave":"Log leave",`<div class="fgrid">
-     <div class="full"><label>Employee *</label><select id="f_emp" ${l?'disabled':''}>${S.employees.map(e=>`<option value="${e.id}" ${l&&l.emp===e.id?'selected':''}>${e.name}</option>`).join("")}</select></div>
+     <div class="full"><label>Employee *</label><select id="f_emp" ${(l||!isHR())?'disabled':''}>${(isHR()?S.employees:S.employees.filter(e=>e.id===selfId())).map(e=>`<option value="${e.id}" ${((l&&l.emp===e.id)||(!isHR()&&e.id===selfId()))?'selected':''}>${e.name}</option>`).join("")}</select></div>
      <div><label>Type *</label><select id="f_type" onchange="leaveTypeChange()">${types.map(t=>`<option ${l&&l.type===t?'selected':''}>${t}</option>`).join("")}</select></div>
      <div id="f_paidWrap" style="display:none"><label>Emergency leave is *</label><select id="f_paid"><option value="paid" ${l&&l.paid?'selected':''}>Paid (from annual balance)</option><option value="unpaid" ${l&&l.paid===false?'selected':''}>Unpaid</option></select></div>
      <div><label>From *</label><input type="date" id="f_start" value="${(l&&l.start)||''}"></div>
@@ -669,7 +669,7 @@ function decideLeave(id,status){
 function saveLeave(id){
   id=id||($("#f_lid")&&$("#f_lid").value)||"";
   const prev=id?S.leaves.find(x=>x.id===id):null;
-  const emp=$("#f_emp").value,type=$("#f_type").value,start=$("#f_start").value,end=$("#f_end").value;
+  let emp=$("#f_emp").value;if(!isHR()&&selfId())emp=selfId();const type=$("#f_type").value,start=$("#f_start").value,end=$("#f_end").value;
   const status=($("#f_status")&&$("#f_status").value)||(prev?prev.status:"Requested");
   if(!emp||!start||!end){alert("Employee, from and to dates are required.");return;}
   if(D(end)<D(start)){alert("End date is before start date.");return;}
@@ -711,7 +711,7 @@ function rToil(){
 function toilForm(kind){
   const work=kind==="work";const mD=S.settings.weekdayMult||2,mW=S.settings.toilMult||3;
   modal(work?"Log overtime":"Log time off in lieu",`<div class="fgrid">
-     <div class="full"><label>Employee *</label><select id="f_emp">${S.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join("")}</select></div>
+     <div class="full"><label>Employee *</label><select id="f_emp" ${!isHR()?'disabled':''}>${(isHR()?S.employees:S.employees.filter(e=>e.id===selfId())).map(e=>`<option value="${e.id}" ${(!isHR()&&e.id===selfId())?'selected':''}>${e.name}</option>`).join("")}</select></div>
      ${work?`<div class="full"><label>Type *</label><select id="f_type"><option value="weekend">Weekend / public holiday (${mW}\u00d7)</option><option value="weekday">Regular working day overtime (${mD}\u00d7)</option></select></div>`:''}
      <div><label>Date *</label><input type="date" id="f_date"></div>
      <div><label>Hours *</label><input type="number" step="0.5" id="f_hours"></div>
@@ -720,7 +720,7 @@ function toilForm(kind){
    [["Cancel","closeModal()","g"],[work?"Add overtime":"Deduct time off",`saveToil('${kind}')`,"p"]]);
 }
 function saveToil(kind){
-  const emp=$("#f_emp").value,date=$("#f_date").value,hours=+$("#f_hours").value,note=$("#f_note").value;
+  let emp=$("#f_emp").value;if(!isHR()&&selfId())emp=selfId();const date=$("#f_date").value,hours=+$("#f_hours").value,note=$("#f_note").value;
   if(!emp||!date||!hours){alert("Employee, date and hours are required.");return;}
   if(kind==="work"){const type=($("#f_type")&&$("#f_type").value)||"weekend";const mult=type==="weekday"?(S.settings.weekdayMult||2):(S.settings.toilMult||3);S.weekend.push({id:uid(),emp,date,hours,note,type,mult,_ts:Date.now()});dbSet("weekend",S.weekend);}
   else{S.toil.push({id:uid(),emp,date,hours,note,_ts:Date.now()});dbSet("toil",S.toil);}
@@ -1313,21 +1313,23 @@ function eligibleTicketEmps(){return S.employees.filter(e=>e.ticket&&e.status!==
 function totalTicketLiability(){return eligibleTicketEmps().reduce((s,e)=>s+ticketProvision(e),0);}
 function ticketsDueNow(){return eligibleTicketEmps().filter(e=>{const d=ticketDueDays(e);return d!=null&&d<=0;});}
 function rTickets(){
- const elig=eligibleTicketEmps();
+ const hr=isHR();
+ const elig=hr?eligibleTicketEmps():eligibleTicketEmps().filter(e=>e.id===selfId());
+ const myTickets=hr?S.tickets:S.tickets.filter(t=>t.emp===selfId());
  const head=`<div class="grid cards" style="margin-bottom:6px">
    <div class="card stat"><div class="k">Ticket liability (accrued)</div><div class="v" style="font-size:23px;color:var(--teal)">AED ${aed(totalTicketLiability())}</div><div class="sub">across ${elig.length} eligible</div></div>
    <div class="card stat"><div class="k">Tickets due now</div><div class="v" style="color:${ticketsDueNow().length?'var(--red)':'var(--green)'}">${ticketsDueNow().length}</div></div>
    <div class="card stat"><div class="k">Cycle</div><div class="v" style="font-size:20px">${ticketCycle()} mo</div><div class="sub">configurable in Settings</div></div>
  </div>`;
  view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">Annual air-ticket entitlement for eligible employees. Liability accrues across each ${ticketCycle()}-month cycle from the last paid date (or joining date). When a ticket is due and paid, record the date \u2014 this resets the cycle and clears the accrued liability.</div>
-  ${head}
-  <div class="sec-h"><h2>Eligible employees</h2></div>
+  ${hr?head:''}
+  <div class="sec-h"><h2>${hr?'Eligible employees':'My annual ticket'}</h2></div>
   <div class="tablewrap">${elig.length?`<table><thead><tr><th>Employee</th><th>Last paid / since</th><th>Next due</th><th>Status</th><th class="right">Ticket cost</th><th class="right">Accrued</th><th class="right"></th></tr></thead><tbody>
   ${elig.map(e=>{const d=ticketDueDays(e);const nd=ticketNextDue(e);const ps=ticketPayments(e);const last=ps.length?prettyD(ps[ps.length-1].date):('since '+prettyD(e.start));
     const badge=d==null?'<span class="badge b-grey">\u2014</span>':(d<=0?`<span class="badge b-red">${d<0?(-d)+'d overdue':'Due now'}</span>`:(d<=45?`<span class="badge b-amber">in ${d}d</span>`:`<span class="badge b-green">in ${d}d</span>`));
     return `<tr><td class="emp-name">${e.name}</td><td class="mono">${last}</td><td class="mono">${nd?prettyD(dateStr(nd)):'\u2014'}</td><td>${badge}</td><td class="right mono">${e.ticketCost?aed(e.ticketCost):'\u2014'}</td><td class="right mono">AED ${aed(ticketProvision(e))}</td><td class="right">${isHR()?`<button class="btn p sm" onclick="ticketForm('${e.id}')">Record payment</button>`:''}</td></tr>`;}).join("")}
   </tbody></table>`:`<div class="empty"><b>No ticket-eligible employees</b>On an employee, tick \u201cAnnual ticket: Eligible\u201d and set a ticket cost.</div>`}</div>
-  ${S.tickets.length?`<div class="sec-h"><h2>Payment history</h2></div><div class="tablewrap"><table><thead><tr><th>Employee</th><th>Date paid</th><th>Amount</th><th>By</th><th>Note</th>${isHR()?'<th></th>':''}</tr></thead><tbody>${S.tickets.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(t=>{const e=S.employees.find(x=>x.id===t.emp);return`<tr><td class="emp-name">${e?e.name:'\u2014'}</td><td class="mono">${prettyD(t.date)}</td><td class="mono">AED ${aed(t.amount||0)}</td><td class="muted">${t.by||''}</td><td class="muted">${t.note||''}</td>${isHR()?`<td class="right"><button class="btn danger sm" onclick="delItem('tickets','${t.id}','tickets')">\u2715</button></td>`:''}</tr>`}).join("")}</tbody></table></div>`:''}`;
+  ${myTickets.length?`<div class="sec-h"><h2>Payment history</h2></div><div class="tablewrap"><table><thead><tr><th>Employee</th><th>Date paid</th><th>Amount</th><th>By</th><th>Note</th>${isHR()?'<th></th>':''}</tr></thead><tbody>${myTickets.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(t=>{const e=S.employees.find(x=>x.id===t.emp);return`<tr><td class="emp-name">${e?e.name:'\u2014'}</td><td class="mono">${prettyD(t.date)}</td><td class="mono">AED ${aed(t.amount||0)}</td><td class="muted">${t.by||''}</td><td class="muted">${t.note||''}</td>${isHR()?`<td class="right"><button class="btn danger sm" onclick="delItem('tickets','${t.id}','tickets')">\u2715</button></td>`:''}</tr>`}).join("")}</tbody></table></div>`:''}`;
 }
 function ticketForm(empId){
  if(!isHR()){alert("Only HR can record ticket payments.");return;}
@@ -1542,13 +1544,14 @@ function rHandbook(){
 function hbFilter(q){q=(q||"").trim().toLowerCase();document.querySelectorAll("#hbList .hb-sec").forEach(el=>{const hit=!q||el.dataset.txt.includes(q);el.style.display=hit?"":"none";if(q&&hit)el.classList.add("open");});}
 
 function rDocs(){
-  if(!isHR()){view.innerHTML=`<div class="empty"><b>Restricted</b>Documents are available to admins and full-access users only.</div>`;return;}
-  const emps=S.employees;
-  view.innerHTML=`<div class="sec-h"><h2>Employee documents</h2></div>
-   <div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">Files upload to the shared OneDrive (demo@core-velocity.com \u2192 CoreV-HR/Documents). You must be signed in with Microsoft to upload or view.</div>
+  const hr=isHR();
+  const emps=hr?S.employees:S.employees.filter(e=>e.id===selfId());
+  if(!hr&&!emps.length){view.innerHTML=`<div class="empty"><b>No documents</b>Your login isn't linked to an employee profile yet \u2014 ask HR to add your work email to your record.</div>`;return;}
+  view.innerHTML=`<div class="sec-h"><h2>${hr?'Employee documents':'My documents'}</h2></div>
+   <div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">${hr?'Files upload to the shared OneDrive (demo@core-velocity.com \u2192 CoreV-HR/Documents). You must be signed in with Microsoft to upload or view.':'Your personal documents. You can view your own files \u2014 only HR can upload or change them.'}</div>
    <div class="tablewrap" style="margin-top:14px;overflow-x:auto">${emps.length?`<table><thead><tr><th>Employee</th>${DOC_TYPES.map(t=>`<th>${t}</th>`).join("")}</tr></thead><tbody>
    ${emps.map(e=>`<tr><td class="emp-name">${e.name}<div class="emp-sub mono">${e.empId||''}</div></td>
-     ${DOC_TYPES.map(t=>{const d=S.docs.find(x=>x.emp===e.id&&x.type===t);return `<td>${d?`<a class="btn g sm" href="${d.webUrl}" target="_blank" rel="noopener">View</a> <button class="btn danger sm" onclick="delDoc('${d.id}')">\u2715</button><div class="emp-sub" style="margin-top:3px">${prettyD((d.uploadedAt||'').slice(0,10))}</div>`:`<button class="btn g sm" onclick="pickDoc('${e.id}','${t}')">Upload</button>`}</td>`}).join("")}
+     ${DOC_TYPES.map(t=>{const d=S.docs.find(x=>x.emp===e.id&&x.type===t);return `<td>${d?`<a class="btn g sm" href="${d.webUrl}" target="_blank" rel="noopener">View</a> ${hr?`<button class="btn danger sm" onclick="delDoc('${d.id}')">\u2715</button>`:''}<div class="emp-sub" style="margin-top:3px">${prettyD((d.uploadedAt||'').slice(0,10))}</div>`:(hr?`<button class="btn g sm" onclick="pickDoc('${e.id}','${t}')">Upload</button>`:'<span class="muted">\u2014</span>')}</td>`}).join("")}
    </tr>`).join("")}
    </tbody></table>`:`<div class="empty"><b>No employees</b>Add employees first.</div>`}</div>`;
 }
