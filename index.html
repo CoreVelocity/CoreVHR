@@ -230,6 +230,7 @@ tbody tr:hover{background:#FCFBF7}
         <div class="nav" data-v="suppliers">Suppliers</div>
         <div class="nav" data-v="companydocs">Company Docs</div>
         <div class="nav" data-v="marketing">Marketing</div>
+        <div class="nav" data-v="handbook">Company Handbook</div>
       </div>
     </div>
 
@@ -237,13 +238,12 @@ tbody tr:hover{background:#FCFBF7}
       <div class="navhead">Performance <span class="gcaret">›</span></div>
       <div class="navsub">
         <div class="nav" data-v="perf">Reviews &amp; Appraisals</div>
-        <div class="nav" data-v="handbook">Company Handbook</div>
       </div>
     </div>
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.25<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.27<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -1361,8 +1361,8 @@ function remindTickets(){const due=ticketsDueNow();if(!due.length)return;if(docu
  const rows=due.map(e=>{const d=ticketDueDays(e);return `<div class="card" style="margin-bottom:8px;background:var(--amber-wash);border-color:#EBD9A8"><div class="flex" style="justify-content:space-between;align-items:center"><div><b>\u2708 ${e.name}</b><div class="emp-sub muted">Annual ticket ${d<0?(-d)+' days overdue':'due now'}${e.ticketCost?' \u00b7 AED '+aed(e.ticketCost):''}</div></div>${isHR()?`<button class="btn g sm" onclick="closeModal();setView('tickets')">Open</button>`:''}</div></div>`;}).join("");
  modal("\u2708 Annual tickets due","<p style=\"margin-bottom:12px\">These employees are due their annual air ticket:</p>"+rows,[["Noted","closeModal()","p"]]);
 }
-async function notifyTicketsDue(){const due=ticketsDueNow();if(!due.length)return;const key="ticketsNotified_"+dateStr(today());try{if(localStorage.getItem(key))return;}catch(_){}
- const ok=await sendMail(ADMIN_EMAILS,"\u2708 Annual tickets due \u2014 "+due.map(e=>e.name).join(", "),"The following employees are due their annual air ticket:\n\n"+due.map(e=>"- "+e.name+(e.ticketCost?(" (AED "+aed(e.ticketCost)+")"):"")).join("\n")+"\n\nPlease arrange and confirm payment in the Annual Tickets tab.\n\nCoreV | OxeFit HR portal");
+async function notifyTicketsDue(){const due=ticketsDueNow();if(!due.length)return;const key="ticketsNotified_"+curMonth();try{if(localStorage.getItem(key))return;}catch(_){}
+ const ok=await sendMail(ADMIN_EMAILS,"\u2708 Annual tickets due \u2014 "+due.map(e=>e.name).join(", "),"The following employees are due their annual air ticket:\n\n"+due.map(e=>"- "+e.name+(e.ticketCost?(" ("+aed(e.ticketCost)+")"):"")).join("\n")+"\n\nThis is a monthly reminder. Please arrange and confirm payment in the Annual Tickets tab.\n\nCoreV | OxeFit HR portal");
  try{if(ok)localStorage.setItem(key,"1");}catch(_){}}
 
 /* ---------- Leave summary + shared upload + repositories ---------- */
