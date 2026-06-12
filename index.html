@@ -19,7 +19,7 @@ body{background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",sans-s
   background-image:radial-gradient(circle at 1px 1px, rgba(27,26,23,.035) 1px, transparent 0);background-size:22px 22px;}
 .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
 /* ---- sidebar ---- */
-.side{background:var(--teal-d);color:#EAF2F0;padding:22px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.side{background:var(--teal-d);color:#EAF2F0;padding:22px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;align-self:start;overflow-y:auto}
 .brand{display:flex;align-items:baseline;gap:8px;padding:4px 8px 20px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:14px}
 .brand b{font-family:"Montserrat",sans-serif;font-size:25px;font-weight:600;letter-spacing:-.5px;color:#fff}
 .brand span{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#9AA6E6}
@@ -212,18 +212,24 @@ tbody tr:hover{background:#FCFBF7}
     </div>
 
     <div class="navgroup" id="g_pay">
-      <div class="navhead">Payroll &amp; Compliance <span class="gcaret">›</span></div>
+      <div class="navhead">Payroll <span class="gcaret">›</span></div>
       <div class="navsub">
         <div class="nav" data-v="salary">Monthly Salaries</div>
         <div class="nav" data-v="tickets">Annual Tickets</div>
-        <div class="nav" data-v="iloe">ILOE</div>
-        <div class="nav" data-v="insurance">Insurance</div>
-        <div class="nav" data-v="companydocs">Company Docs</div>
-        <div class="nav" data-v="marketing">Marketing</div>
-        <div class="nav" data-v="suppliers">Suppliers</div>
-        <div class="nav" data-v="letters">Letters <small id="navLetters" style="display:none"></small></div>
         <div class="nav" data-v="eos">End of Service</div>
         <div class="nav" data-v="off">Offboarding</div>
+      </div>
+    </div>
+
+    <div class="navgroup" id="g_admin">
+      <div class="navhead">Company &amp; Compliance <span class="gcaret">›</span></div>
+      <div class="navsub">
+        <div class="nav" data-v="letters">Letters <small id="navLetters" style="display:none"></small></div>
+        <div class="nav" data-v="iloe">ILOE</div>
+        <div class="nav" data-v="insurance">Insurance</div>
+        <div class="nav" data-v="suppliers">Suppliers</div>
+        <div class="nav" data-v="companydocs">Company Docs</div>
+        <div class="nav" data-v="marketing">Marketing</div>
       </div>
     </div>
 
@@ -237,7 +243,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.23<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.25<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -462,6 +468,10 @@ function rDash(){
    ${(()=>{ if(!isHR())return ''; const ds=(S.companyDocs||[]).map(d=>({d,days:d.expiry?daysBetween(today(),D(d.expiry)):null})).filter(x=>x.days!=null&&x.days<=60).sort((a,b)=>a.days-b.days); if(!ds.length)return '';
      const rows=ds.map(x=>`<tr><td><b>${x.d.docType||x.d.name||'\u2014'}</b>${x.d.name&&x.d.docType?(' <span class="muted">'+x.d.name+'</span>'):''}</td><td class="mono">${prettyD(x.d.expiry)}</td><td><span class="badge ${x.days<0?'b-red':(x.days<=30?'b-amber':'b-grey')}">${x.days<0?(-x.days)+'d overdue':'in '+x.days+'d'}</span></td></tr>`).join("");
      return `<div class="sec-h"><h2>Company documents \u2014 expiring</h2></div><div class="tablewrap"><table><thead><tr><th>Document</th><th>Expiry</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;})()}
+   ${(()=>{ if(!isHR())return ''; const cm=curMonth(); const pend=(S.suppliers||[]).filter(x=>(+x.monthlyExpense||0)>0&&!supPaid(x,cm)).map(x=>({x,nd:supNextDue(x)})).sort((a,b)=>((a.nd?a.nd.days:9999)-(b.nd?b.nd.days:9999))); if(!pend.length)return '';
+     const tot=pend.reduce((s,o)=>s+(+o.x.monthlyExpense||0),0);
+     const rows=pend.map(o=>`<tr><td><b>${o.x.business||o.x.name||'\u2014'}</b></td><td class="right mono">${aed(+o.x.monthlyExpense||0)}</td><td class="mono">${o.nd?prettyD(_ymd(o.nd.date)):'<span class="muted">set due day</span>'}</td><td>${o.nd?`<span class="badge ${o.nd.days<0?'b-red':(o.nd.days<=7?'b-amber':'b-grey')}">${o.nd.days<0?(-o.nd.days)+'d overdue':(o.nd.days===0?'today':'in '+o.nd.days+'d')}</span>`:'\u2014'}</td><td class="right">${isHR()?`<button class="btn p sm" onclick="toggleSupplierPaid('${o.x.id}','${cm}')">Mark paid</button>`:''}</td></tr>`).join("");
+     return `<div class="sec-h"><h2>Supplier payments due \u00b7 ${monthLabel(cm)}</h2><span class="tag">${aed(tot)} pending</span></div><div class="tablewrap"><table><thead><tr><th>Supplier</th><th class="right">Amount</th><th>Trigger date</th><th>Status</th><th class="right"></th></tr></thead><tbody>${rows}</tbody></table></div>`;})()}
    ${(()=>{ const emps=isHR()?S.employees.filter(e=>e.status!=="Exited"):S.employees.filter(e=>e.id===selfId()); if(!emps.length)return '';
      const rows=emps.map(e=>{const sm=leaveSumYear(e);return `<tr data-n="${(e.name||'').toLowerCase()}"><td class="emp-name">${e.name}</td><td class="right mono">${fmt1(sm.annualTaken)} / ${fmt1(sm.annualBal)}</td><td class="right mono">${sm.sick}</td><td class="right mono">${sm.unpaid}</td></tr>`;}).join("");
      return `<div class="sec-h"><h2>Leave summary \u00b7 ${today().getFullYear()}</h2>${isHR()?`<input id="lsFilter" placeholder="Filter by name\u2026" oninput="filterLeaveSummary(this.value)" style="max-width:200px">`:''}</div><div class="tablewrap"><table><thead><tr><th>Employee</th><th class="right">Annual (taken / balance)</th><th class="right">Sick</th><th class="right">Unpaid</th></tr></thead><tbody id="lsBody">${rows}</tbody></table></div>`;})()}
@@ -1406,25 +1416,51 @@ async function saveCompanyDoc(id){
 }
 
 /* ----- Marketing & printed materials archive ----- */
+let supMonth=null;
+function setSupMonth(v){supMonth=v;setView("suppliers");}
+function _ymd(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function curMonth(){const t=today();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}`;}
+function monthLabel(ym){const a=ym.split('-').map(Number);return new Date(a[0],a[1]-1,1).toLocaleDateString("en-GB",{month:"short",year:"numeric"});}
+function supMonthOptions(){const t=today(),out=[];for(let i=0;i<12;i++){const d=new Date(t.getFullYear(),t.getMonth()-i,1);out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}return out;}
+function supPaid(x,ym){return !!(x.payments&&x.payments[ym]&&x.payments[ym].paid);}
+function supDueDate(x,ym){if(!x.dueDay)return null;const a=ym.split('-').map(Number),last=new Date(a[0],a[1],0).getDate();return new Date(a[0],a[1]-1,Math.min(+x.dueDay,last));}
+function supNextDue(x){if(!x.dueDay)return null;const t=today(),cm=curMonth();let ym=cm;if(supPaid(x,cm)){const nm=new Date(t.getFullYear(),t.getMonth()+1,1);ym=`${nm.getFullYear()}-${String(nm.getMonth()+1).padStart(2,'0')}`;}const d=supDueDate(x,ym);return {date:d,days:daysBetween(today(),d),ym};}
+function supStatusBadge(x,ym){const due=supDueDate(x,ym);if(supPaid(x,ym))return `<span class="badge b-green">Paid${x.payments[ym].on?' \u00b7 '+prettyD(x.payments[ym].on):''}</span>`;const od=due&&ym<=curMonth()&&daysBetween(today(),due)<0;return `<span class="badge ${od?'b-red':'b-amber'}">${od?'Overdue':'Pending'}</span>`;}
+function toggleSupplierPaid(id,ym){if(!isHR())return;const x=S.suppliers.find(o=>o.id===id);if(!x)return;x.payments=x.payments||{};if(supPaid(x,ym))delete x.payments[ym];else x.payments[ym]={paid:true,on:_ymd(today()),amount:+x.monthlyExpense||0};x._ts=Date.now();dbSet();setView("suppliers");}
 function rSuppliers(){
   const list=(S.suppliers||[]).slice().sort((a,b)=>((a.business||a.name||'').toLowerCase()).localeCompare((b.business||b.name||'').toLowerCase()));
+  const cm=curMonth(),ym=supMonth||cm;
   const totalMonthly=list.reduce((s,x)=>s+(+x.monthlyExpense||0),0);
-  view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">Office suppliers & vendors \u2014 business details, monthly spend, bank details, contacts and agreement renewals.</div>
+  const payable=list.filter(x=>(+x.monthlyExpense||0)>0);
+  const pend=payable.filter(x=>!supPaid(x,cm));
+  const pendTotal=pend.reduce((s,x)=>s+(+x.monthlyExpense||0),0);
+  const dueList=list.map(x=>({x,nd:supNextDue(x)})).filter(o=>o.nd).sort((a,b)=>a.nd.days-b.nd.days);
+  const next=dueList[0];
+  const nextTxt=next?`${next.x.business||next.x.name} \u00b7 ${next.nd.days<0?(-next.nd.days)+'d overdue':(next.nd.days===0?'today':'in '+next.nd.days+'d')}`:'\u2014';
+  view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">Office suppliers & vendors \u2014 spend, contacts, agreements and a monthly payment tracker. Set a <b>payment due day</b> to get trigger reminders here and on the dashboard.</div>
    <div class="grid cards" style="margin-bottom:6px">
      <div class="card stat"><div class="k">Suppliers</div><div class="v">${list.length}</div></div>
-     <div class="card stat"><div class="k">Total monthly spend</div><div class="v" style="font-size:23px;color:var(--teal)">AED ${aed(totalMonthly)}</div><div class="sub">across all suppliers</div></div>
+     <div class="card stat"><div class="k">Total monthly spend</div><div class="v" style="font-size:22px;color:var(--teal)">${aed(totalMonthly)}</div></div>
+     <div class="card stat" style="${pendTotal>0?'background:var(--teal-wash);border-color:#C3C9EC':''}"><div class="k">Pending this month</div><div class="v" style="font-size:22px">${aed(pendTotal)}</div><div class="sub">${pend.length} supplier${pend.length===1?'':'s'} unpaid</div></div>
+     <div class="card stat"><div class="k">Next payment due</div><div class="v" style="font-size:15px;color:var(--teal)">${nextTxt}</div>${next?`<div class="sub">${prettyD(_ymd(next.nd.date))}</div>`:''}</div>
    </div>
-   <div class="sec-h"><h2>Suppliers</h2>${isHR()?`<button class="btn p" onclick="supplierForm()">+ Add supplier</button>`:''}</div>
-   ${list.length?list.map(x=>`<div class="card" style="margin-bottom:10px">
-       <div class="flex" style="justify-content:space-between;align-items:flex-start"><div><b class="emp-name">${x.business||x.name||'\u2014'}</b>${x.name&&x.business?` <span class="tag">${x.name}</span>`:''}</div><div>${x.agreementExpiry?expBadge(x.agreementExpiry):'<span class="muted">no agreement date</span>'}${isHR()?` <button class="btn g sm" onclick="supplierForm('${x.id}')">Edit</button><button class="btn danger sm" onclick="delItem('suppliers','${x.id}','suppliers')">\u2715</button>`:''}</div></div>
+   <div class="sec-h"><h2>Monthly payment tracker</h2><div class="flex" style="gap:8px;align-items:center"><select onchange="setSupMonth(this.value)" style="max-width:150px">${supMonthOptions().map(m=>`<option value="${m}" ${m===ym?'selected':''}>${monthLabel(m)}</option>`).join("")}</select>${isHR()?`<button class="btn p" onclick="supplierForm()">+ Add supplier</button>`:''}</div></div>
+   <div class="tablewrap">${payable.length?`<table><thead><tr><th>Supplier</th><th class="right">Amount</th><th>Trigger date</th><th>Status</th>${isHR()?'<th class="right"></th>':''}</tr></thead><tbody>
+   ${payable.map(x=>{const due=supDueDate(x,ym);const paid=supPaid(x,ym);return `<tr><td><b>${x.business||x.name||'\u2014'}</b></td><td class="right mono">${aed(+x.monthlyExpense||0)}</td><td class="mono">${x.dueDay?prettyD(_ymd(due)):'<span class="muted">no due day</span>'}</td><td>${supStatusBadge(x,ym)}</td>${isHR()?`<td class="right"><button class="btn ${paid?'g':'p'} sm" onclick="toggleSupplierPaid('${x.id}','${ym}')">${paid?'Mark unpaid':'Mark paid'}</button></td>`:''}</tr>`;}).join("")}
+   </tbody></table>`:`<div class="empty"><b>No payable suppliers</b>Add a supplier with a monthly expense to track payments.</div>`}</div>
+   <div class="sec-h"><h2>Supplier details</h2></div>
+   ${list.length?list.map(x=>{const nd=supNextDue(x);return `<div class="card" style="margin-bottom:10px">
+       <div class="flex" style="justify-content:space-between;align-items:flex-start"><div><b class="emp-name">${x.business||x.name||'\u2014'}</b>${x.name&&x.business?` <span class="tag">${x.name}</span>`:''} ${supStatusBadge(x,cm)}</div><div>${x.agreementExpiry?expBadge(x.agreementExpiry):'<span class="muted">no agreement date</span>'}${isHR()?` <button class="btn g sm" onclick="supplierForm('${x.id}')">Edit</button><button class="btn danger sm" onclick="delItem('suppliers','${x.id}','suppliers')">\u2715</button>`:''}</div></div>
        <div class="fgrid" style="margin-top:12px">
-         <div><label>Monthly expense</label><b class="mono">AED ${aed(+x.monthlyExpense||0)}</b></div>
+         <div><label>Monthly expense</label><b class="mono">${aed(+x.monthlyExpense||0)}</b></div>
+         <div><label>Payment due day</label><span class="mono">${x.dueDay?('day '+x.dueDay+' of each month'):'\u2014'}</span></div>
+         <div><label>Next payment</label><span class="mono">${nd?prettyD(_ymd(nd.date))+' ('+(nd.days<0?(-nd.days)+'d overdue':(nd.days===0?'today':'in '+nd.days+'d'))+')':'\u2014'}</span></div>
          <div><label>Contact number</label><span class="mono">${x.contact||'\u2014'}</span></div>
          <div><label>Agreement expiry</label><span class="mono">${x.agreementExpiry?prettyD(x.agreementExpiry):'\u2014'}</span></div>
          <div class="full"><label>Address</label>${x.address||'\u2014'}</div>
          <div class="full"><label>Bank details</label><span class="mono">${(x.bankDetails||'\u2014').replace(/</g,'&lt;')}</span></div>
-       </div></div>`).join("")
-     :`<div class="empty"><b>No suppliers yet</b>${isHR()?'Add your office suppliers and vendors with their spend and agreement details.':'Ask admin to add suppliers.'}</div>`}`;
+       </div></div>`;}).join("")
+     :`<div class="empty"><b>No suppliers yet</b>${isHR()?'Add your office suppliers and vendors with their spend, due day and agreement details.':'Ask admin to add suppliers.'}</div>`}`;
 }
 function supplierForm(id){
   if(!isHR()){alert("Only admin/full-access users can manage suppliers.");return;}
@@ -1434,6 +1470,7 @@ function supplierForm(id){
      <div><label>Contact name</label><input id="sp_name" value="${(x&&x.name)||''}" placeholder="person / rep"></div>
      <div><label>Contact number</label><input id="sp_contact" value="${(x&&x.contact)||''}" placeholder="+971 \u2026"></div>
      <div><label>Monthly expense (AED)</label><input type="number" id="sp_monthly" value="${(x&&x.monthlyExpense)||''}"></div>
+     <div><label>Payment due day (1–31)</label><input type="number" min="1" max="31" id="sp_dueDay" value="${(x&&x.dueDay)||''}" placeholder="e.g. 5"></div>
      <div><label>Agreement expiry</label><input type="date" id="sp_expiry" value="${(x&&x.agreementExpiry)||''}"></div>
      <div class="full"><label>Address</label><input id="sp_address" value="${(x&&x.address)||''}"></div>
      <div class="full"><label>Bank details</label><textarea id="sp_bank" rows="2" style="width:100%" placeholder="Bank, account name, IBAN, account no.">${(x&&x.bankDetails)||''}</textarea></div>
@@ -1444,7 +1481,7 @@ function saveSupplier(id){
   if(!isHR())return;
   const business=$("#sp_business").value.trim(),name=$("#sp_name").value.trim();
   if(!business&&!name){alert("Please enter at least a business or contact name.");return;}
-  const o={business,name,contact:$("#sp_contact").value,monthlyExpense:+$("#sp_monthly").value||0,agreementExpiry:$("#sp_expiry").value,address:$("#sp_address").value,bankDetails:$("#sp_bank").value,_ts:Date.now()};
+  const o={business,name,contact:$("#sp_contact").value,monthlyExpense:+$("#sp_monthly").value||0,dueDay:+$("#sp_dueDay").value||0,agreementExpiry:$("#sp_expiry").value,address:$("#sp_address").value,bankDetails:$("#sp_bank").value,_ts:Date.now()};
   if(id){const r=S.suppliers.find(z=>z.id===id);if(r)Object.assign(r,o);}
   else{S.suppliers.push(Object.assign({id:uid(),by:currentUser,at:new Date().toISOString()},o));}
   dbSet();closeModal();setView("suppliers");flash("Supplier saved");
