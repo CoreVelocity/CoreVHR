@@ -243,7 +243,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.28<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.29<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -264,7 +264,7 @@ tbody tr:hover{background:#FCFBF7}
 
 <script>
 /* ============ config: Microsoft SSO + OneDrive shared sync ============ */
-const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing","suppliers","tombstones","settings"];
+const KEYS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing","suppliers","invoices","tombstones","settings"];
 const ONEDRIVE_CONFIG = {
   clientId   : 'cd1b7f5f-5ff9-4066-ab4f-06f270a94fcb',          // same Azure app as the working Sales/Delivery tracker
   authority  : 'https://login.microsoftonline.com/core-velocity.com',
@@ -282,7 +282,7 @@ const ROLE_MAP = {
 };
 function roleForEmail(e){return ROLE_MAP[(e||'').toLowerCase().trim()]||'employee';}
 
-let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],offboardings:[],tickets:[],payruns:[],companyDocs:[],marketing:[],suppliers:[],tombstones:{},
+let S={employees:[],leaves:[],weekend:[],toil:[],letters:[],assets:[],docs:[],reviews:[],offboardings:[],tickets:[],payruns:[],companyDocs:[],marketing:[],suppliers:[],invoices:[],tombstones:{},
   settings:{companyName:"CoreV | OxeFit",tradeLicense:"",address:"Dubai, United Arab Emirates",phone:"",
     signatory:"",signatoryTitle:"HR Manager",website:"",insurance:{company:"",policyNo:"",refId:"",benefits:"",docs:[]},marketingCats:["Business Cards","Booklets","Pricing","Technical Material"],carryCap:23,dailyHours:8,toilMult:3,weekdayMult:2,ticketCycle:12,logo:""}};
 let role="employee", currentUser="", currentEmail="";
@@ -1444,10 +1444,14 @@ function rSuppliers(){
      <div class="card stat" style="${pendTotal>0?'background:var(--teal-wash);border-color:#C3C9EC':''}"><div class="k">Pending this month</div><div class="v" style="font-size:22px">${aed(pendTotal)}</div><div class="sub">${pend.length} supplier${pend.length===1?'':'s'} unpaid</div></div>
      <div class="card stat"><div class="k">Next payment due</div><div class="v" style="font-size:15px;color:var(--teal)">${nextTxt}</div>${next?`<div class="sub">${prettyD(_ymd(next.nd.date))}</div>`:''}</div>
    </div>
-   <div class="sec-h"><h2>Monthly payment tracker</h2><div class="flex" style="gap:8px;align-items:center"><select onchange="setSupMonth(this.value)" style="max-width:150px">${supMonthOptions().map(m=>`<option value="${m}" ${m===ym?'selected':''}>${monthLabel(m)}</option>`).join("")}</select>${isHR()?`<button class="btn p" onclick="supplierForm()">+ Add supplier</button>`:''}</div></div>
+   <div class="sec-h"><h2>Monthly payment tracker</h2><div class="flex" style="gap:8px;align-items:center"><select onchange="setSupMonth(this.value)" style="max-width:150px">${supMonthOptions().map(m=>`<option value="${m}" ${m===ym?'selected':''}>${monthLabel(m)}</option>`).join("")}</select>${isHR()?`<button class="btn g" onclick="invoiceForm()">+ Add invoice</button> <button class="btn p" onclick="supplierForm()">+ Add supplier</button>`:''}</div></div>
    <div class="tablewrap">${payable.length?`<table><thead><tr><th>Supplier</th><th class="right">Amount</th><th>Trigger date</th><th>Status</th>${isHR()?'<th class="right"></th>':''}</tr></thead><tbody>
    ${payable.map(x=>{const due=supDueDate(x,ym);const paid=supPaid(x,ym);return `<tr><td><b>${x.business||x.name||'\u2014'}</b></td><td class="right mono">${aed(+x.monthlyExpense||0)}</td><td class="mono">${x.dueDay?prettyD(_ymd(due)):'<span class="muted">no due day</span>'}</td><td>${supStatusBadge(x,ym)}</td>${isHR()?`<td class="right"><button class="btn ${paid?'g':'p'} sm" onclick="toggleSupplierPaid('${x.id}','${ym}')">${paid?'Mark unpaid':'Mark paid'}</button></td>`:''}</tr>`;}).join("")}
    </tbody></table>`:`<div class="empty"><b>No payable suppliers</b>Add a supplier with a monthly expense to track payments.</div>`}</div>
+   <div class="sec-h"><h2>Monthly expense summary</h2><span class="tag">${aed(invTotalMonth(ym))} invoiced \u00b7 ${monthLabel(ym)}</span></div>
+   <div class="tablewrap"><table><thead><tr><th>Supplier</th><th class="right">Invoices</th><th class="right">Invoiced (${monthLabel(ym)})</th><th class="right">Agreed monthly</th></tr></thead><tbody>
+   ${list.map(x=>{const inv=invoicesForMonth(x.id,ym);const tot=inv.reduce((s,i)=>s+(+i.amount||0),0);if(!inv.length&&!((+x.monthlyExpense||0)>0))return '';return `<tr><td><b>${x.business||x.name||'\u2014'}</b></td><td class="right mono">${inv.length}</td><td class="right mono">${aed(tot)}</td><td class="right mono">${aed(+x.monthlyExpense||0)}</td></tr>`;}).join("")||`<tr><td colspan="4" class="muted">No invoices or recurring expenses for this month.</td></tr>`}
+   </tbody><tfoot><tr><th>Total</th><th class="right mono">${(S.invoices||[]).filter(i=>invMonth(i.date)===ym).length}</th><th class="right mono">${aed(invTotalMonth(ym))}</th><th class="right mono">${aed(list.reduce((s,x)=>s+(+x.monthlyExpense||0),0))}</th></tr></tfoot></table></div>
    <div class="sec-h"><h2>Supplier details</h2></div>
    ${list.length?list.map(x=>{const nd=supNextDue(x);return `<div class="card" style="margin-bottom:10px">
        <div class="flex" style="justify-content:space-between;align-items:flex-start"><div><b class="emp-name">${x.business||x.name||'\u2014'}</b>${x.name&&x.business?` <span class="tag">${x.name}</span>`:''} ${supStatusBadge(x,cm)}</div><div>${x.agreementExpiry?expBadge(x.agreementExpiry):'<span class="muted">no agreement date</span>'}${isHR()?` <button class="btn g sm" onclick="supplierForm('${x.id}')">Edit</button><button class="btn danger sm" onclick="delItem('suppliers','${x.id}','suppliers')">\u2715</button>`:''}</div></div>
@@ -1459,9 +1463,38 @@ function rSuppliers(){
          <div><label>Agreement expiry</label><span class="mono">${x.agreementExpiry?prettyD(x.agreementExpiry):'\u2014'}</span></div>
          <div class="full"><label>Address</label>${x.address||'\u2014'}</div>
          <div class="full"><label>Bank details</label><span class="mono">${(x.bankDetails||'\u2014').replace(/</g,'&lt;')}</span></div>
+         <div class="full"><label>Invoices</label>${(()=>{const inv=invoicesFor(x.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));return inv.length?`<div style="margin-top:4px">${inv.slice(0,8).map(i=>`<div class="flex" style="justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line)"><span class="mono">${i.date?prettyD(i.date):'\u2014'} \u00b7 ${aed(+i.amount||0)}${i.note?' \u00b7 '+i.note:''}</span><span style="white-space:nowrap">${i.webUrl?`<a class="btn g sm" href="${i.webUrl}" target="_blank">Open</a>`:''}${isHR()?` <button class="btn danger sm" onclick="delInvoice('${i.id}')">\u2715</button>`:''}</span></div>`).join("")}${inv.length>8?`<div class="muted" style="padding:4px 0">+${inv.length-8} more\u2026</div>`:''}</div>`:'<span class="muted">No invoices yet</span>';})()}${isHR()?`<div style="margin-top:8px"><button class="btn g sm" onclick="invoiceForm('${x.id}')">+ Add invoice</button></div>`:''}</div>
        </div></div>`;}).join("")
      :`<div class="empty"><b>No suppliers yet</b>${isHR()?'Add your office suppliers and vendors with their spend, due day and agreement details.':'Ask admin to add suppliers.'}</div>`}`;
 }
+function invMonth(d){return (d||'').slice(0,7);}
+function invoicesFor(supId){return (S.invoices||[]).filter(i=>i.sup===supId);}
+function invoicesForMonth(supId,ym){return (S.invoices||[]).filter(i=>i.sup===supId&&invMonth(i.date)===ym);}
+function invTotalMonth(ym){return (S.invoices||[]).filter(i=>invMonth(i.date)===ym).reduce((s,i)=>s+(+i.amount||0),0);}
+function invoiceForm(supId){
+  if(!isHR()){alert("Only admin/full-access can add invoices.");return;}
+  if(!S.suppliers.length){alert("Add a supplier first.");return;}
+  const opts=S.suppliers.map(x=>`<option value="${x.id}" ${x.id===supId?'selected':''}>${x.business||x.name}</option>`).join("");
+  modal("Add supplier invoice",`<div class="fgrid">
+     <div class="full"><label>Supplier *</label><select id="iv_sup">${opts}</select></div>
+     <div><label>Invoice date *</label><input type="date" id="iv_date" value="${_ymd(today())}"></div>
+     <div><label>Amount (AED) *</label><input type="number" id="iv_amount"></div>
+     <div class="full"><label>Reference / note</label><input id="iv_note" placeholder="invoice no. / description"></div>
+     <div class="full"><label>Invoice file</label><input type="file" id="iv_file"></div>
+   </div><div class="hint">Add invoices any day. Files are stored in the shared OXEFIT/Invoices folder; the monthly summary totals them by invoice date.</div>`,
+   [["Cancel","closeModal()","g"],["Add invoice","saveInvoice()","p"]]);
+}
+async function saveInvoice(){
+  if(!isHR())return;
+  const sup=$("#iv_sup").value,date=$("#iv_date").value,amount=+$("#iv_amount").value||0,note=$("#iv_note").value;
+  if(!sup||!date){alert("Supplier and invoice date are required.");return;}
+  const file=$("#iv_file")&&$("#iv_file").files&&$("#iv_file").files[0];
+  let up;
+  if(file){ if(!msalAccount){flash("Sign in with Microsoft to upload the file.");} else { flash("Uploading\u2026"); try{const item=await graphUploadTo("Invoices",file);up={webUrl:item.webUrl||"",itemId:item.id||"",fileName:file.name};}catch(e){flash("Upload failed (check shared-drive access)");return;} } }
+  const rec={id:uid(),sup,date,amount,note,by:currentUser,at:new Date().toISOString(),_ts:Date.now()};if(up)Object.assign(rec,up);
+  S.invoices.push(rec);dbSet();closeModal();setView("suppliers");flash("Invoice added");
+}
+function delInvoice(id){if(!isHR())return;if(confirm("Remove this invoice?"))delItem('invoices',id,'suppliers');}
 function supplierForm(id){
   if(!isHR()){alert("Only admin/full-access users can manage suppliers.");return;}
   const x=id?S.suppliers.find(o=>o.id===id):null;
@@ -1852,7 +1885,7 @@ async function getAccessToken(){
 }
 let _fileRef=null,_accessError=false;
 const _fileName=(ONEDRIVE_CONFIG.filePath.split("/").pop()||"corev-hr.json").toLowerCase();
-const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing","suppliers"];
+const COLLECTIONS=["employees","leaves","weekend","toil","letters","assets","docs","reviews","offboardings","tickets","payruns","companyDocs","marketing","suppliers","invoices"];
 function driveRootUrl(){const upn=ONEDRIVE_CONFIG.sharedDriveUser;
   if(upn)return `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;
   return `https://graph.microsoft.com/v1.0/me/drive/root:${ONEDRIVE_CONFIG.filePath}:/content`;}
