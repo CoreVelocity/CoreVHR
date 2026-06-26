@@ -243,7 +243,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.33<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.34<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -1224,7 +1224,10 @@ const CLEARANCE=[
 ];
 function offFor(empId){return S.offboardings.find(o=>o.emp===empId);}
 function offProgress(o){const done=CLEARANCE.filter(c=>o.clr&&o.clr[c[0]]&&o.clr[c[0]].done).length;return{done,total:CLEARANCE.length,pct:Math.round(done/CLEARANCE.length*100)};}
-function offSettlement(e){const g=gratuity(e);const lvDays=annualBalance(e).balance;const lvPay=lvDays*(totalSalary(e)/22);return{g,lvDays,lvPay,total:g+lvPay};}
+function offSettlement(e,lastDay){const g=gratuity(e);const lvDays=annualBalance(e).balance;const lvPay=lvDays*(totalSalary(e)/22);
+  let finalSal=0,finDays=0,finTotal=0;
+  if(lastDay){const d=D(lastDay);if(d){finTotal=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();finDays=d.getDate();finalSal=totalSalary(e)*(finDays/finTotal);}}
+  return {g,lvDays,lvPay,finalSal,finDays,finTotal,total:g+lvPay+finalSal};}
 
 function rOff(){
   const cases=isHR()?S.offboardings:S.offboardings.filter(o=>o.emp===selfId());
@@ -1294,7 +1297,7 @@ function completeOffboard(id){
 }
 function offView(id){
   const o=S.offboardings.find(x=>x.id===id);if(!o)return;const e=S.employees.find(x=>x.id===o.emp)||{};
-  const set=offSettlement(e);const pr=offProgress(o);
+  const set=offSettlement(e,o.lastDay);const pr=offProgress(o);
   const assets=S.assets.filter(a=>a.emp===o.emp);const outAssets=assets.filter(a=>a.status!=="Returned");
   const items=CLEARANCE.map(c=>{const st=o.clr&&o.clr[c[0]];const done=st&&st.done;
     const extra=c[0]==="assets"&&assets.length?`<div class="sub">${outAssets.length?('Outstanding: '+outAssets.map(a=>a.type).join(", ")):'All '+assets.length+' item(s) returned'}</div>`:'';
@@ -1310,19 +1313,73 @@ function offView(id){
      <label>Final settlement estimate</label>
      <div class="flex" style="justify-content:space-between;margin-top:6px"><span class="muted">Gratuity (${fmt1(yearsOfService(e))} yrs${e.misconduct?' · forfeited (misconduct)':''})</span><b class="mono">AED ${aed(set.g)}</b></div>
      <div class="flex" style="justify-content:space-between"><span class="muted">Leave payout (${fmt1(set.lvDays)} working days \u00d7 salary/22)</span><b class="mono">AED ${aed(set.lvPay)}</b></div>
+     <div class="flex" style="justify-content:space-between"><span class="muted">Final salary (${set.finDays}/${set.finTotal} days of ${o.lastDay?prettyD(o.lastDay):'exit month'})</span><b class="mono">AED ${aed(set.finalSal)}</b></div>
      <div class="flex" style="justify-content:space-between;border-top:1px solid var(--line);margin-top:6px;padding-top:6px"><b>Estimated total</b><b class="mono" style="color:var(--teal)">AED ${aed(set.total)}</b></div>
      <div class="hint">Indicative only \u2014 confirm against MOHRE rules, notice adjustments and any deductions. Full breakdown in End of Service.</div>
    </div>
    <label>Company property return</label><div style="margin:6px 0 14px">${assetRows}</div>
    <label>Clearance checklist</label><div style="margin-top:8px">${items}</div>
   `,
-  isHR()?[["Mark complete",`completeOffboard('${id}')`,"p"],["Edit",`offForm('${id}')`,"g"],["Close","closeModal()","g"]]:[["Close","closeModal()","p"]]);
+  isHR()?[["Report / PDF",`offReport('${id}')`,"g"],["Mark complete",`completeOffboard('${id}')`,"p"],["Edit",`offForm('${id}')`,"g"],["Close","closeModal()","g"]]:[["Report / PDF",`offReport('${id}')`,"g"],["Close","closeModal()","p"]]);
 }
 function returnAssetFrom(assetId,offId){const a=S.assets.find(x=>x.id===assetId);if(!a)return;a.status="Returned";a.returned=dateStr(today());a._ts=Date.now();
   const o=S.offboardings.find(x=>x.id===offId);if(o){const out=S.assets.filter(x=>x.emp===o.emp&&x.status!=="Returned");if(!out.length){o.clr=o.clr||{};o.clr.assets={done:true,date:dateStr(today()),by:currentUser};o._ts=Date.now();}}
   dbSet();offView(offId);}
 async function notifyOffboard(o){const e=S.employees.find(x=>x.id===o.emp)||{};await sendMail([APPROVER,"gladys@core-velocity.com"],"Offboarding started \u2014 "+(e.name||""),"An offboarding case has been opened in the CoreV | OxeFit portal.\n\nEmployee: "+(e.name||"")+"\nType: "+o.type+"\nLast working day: "+(o.lastDay?prettyD(o.lastDay):"")+"\nReason: "+(o.reason||"")+"\n\nPlease action visa cancellation, insurance removal, MOHRE cancellation and property return via the Offboarding tab.");flash("Offboarding started \u2014 Ahmed & Office Manager notified");}
 
+function offReportHTML(id){
+  const o=S.offboardings.find(x=>x.id===id);if(!o)return '';const e=S.employees.find(x=>x.id===o.emp)||{};
+  const set=offSettlement(e,o.lastDay),pr=offProgress(o),c=S.settings,logo=c.logo;
+  const meta=[c.address,c.phone,c.tradeLicense?("Trade License "+c.tradeLicense):""].filter(Boolean).join("  \u00b7  ");
+  const row=(k,v)=>`<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;color:#555">${k}</td><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600">${v}</td></tr>`;
+  const money=(k,v)=>`<tr><td style="padding:6px 8px;border-bottom:1px solid #eee">${k}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;font-family:monospace">${aed(v)}</td></tr>`;
+  const clr=CLEARANCE.map(cc=>{const st=o.clr&&o.clr[cc[0]];const done=st&&st.done;return `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee">${cc[1]}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap;color:${done?'#127d6e':'#b45309'};font-weight:600">${done?('Completed'+(st.date?' \u00b7 '+prettyD(st.date):'')+(st.by?' \u00b7 '+st.by:'')):'Pending'}</td></tr>`;}).join("");
+  const assets=S.assets.filter(a=>a.emp===o.emp);
+  const assetRows=assets.length?assets.map(a=>`<tr><td style="padding:5px 8px;border-bottom:1px solid #eee">${a.type} ${a.tag||''}</td><td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;color:${a.status==='Returned'?'#127d6e':'#b45309'};font-weight:600">${a.status==='Returned'?'Returned'+(a.returned?' \u00b7 '+prettyD(a.returned):''):'Outstanding'}</td></tr>`).join(""):`<tr><td colspan="2" style="padding:6px 8px;color:#888">No company assets assigned.</td></tr>`;
+  return `<div style="max-width:720px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;background:#fff">
+    <div style="padding:18px 24px 12px;border-bottom:2px solid #1b9aaa">
+      ${logo?`<img src="${logo}" style="max-height:54px;max-width:230px;object-fit:contain">`:`<div style="font-size:20px;font-weight:700;color:#0E1A40">${c.companyName||'CoreV | OxeFit'}</div>`}
+      <div style="font-size:11px;color:#777;margin-top:6px">${meta}</div>
+    </div>
+    <div style="padding:18px 24px">
+      <h2 style="margin:0 0 4px;color:#0E1A40">Offboarding report</h2>
+      <div style="color:#777;font-size:12px;margin-bottom:14px">Generated ${prettyD(_ymd(today()))} \u00b7 Clearance ${pr.pct}% complete (${pr.done}/${pr.total})</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
+        ${row("Employee",(e.name||'')+(e.empId?(' ('+e.empId+')'):''))}
+        ${row("Designation",e.designation||'\u2014')}
+        ${row("Type",o.type)}
+        ${row("Notice / letter date",o.noticeDate?prettyD(o.noticeDate):'\u2014')}
+        ${row("Last working day",o.lastDay?prettyD(o.lastDay):'\u2014')}
+        ${row("Status",o.status)}${o.reason?row("Reason",o.reason):''}
+      </table>
+      <h3 style="color:#0E1A40;margin:0 0 6px">Final settlement (estimate)</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
+        ${money("Gratuity ("+fmt1(yearsOfService(e))+" yrs"+(e.misconduct?' \u00b7 forfeited':'')+")",set.g)}
+        ${money("Leave payout ("+fmt1(set.lvDays)+" working days \u00d7 salary/22)",set.lvPay)}
+        ${money("Final salary ("+set.finDays+"/"+set.finTotal+" days of "+(o.lastDay?prettyD(o.lastDay):'exit month')+")",set.finalSal)}
+        <tr><td style="padding:7px 8px;font-weight:700;border-top:2px solid #1b9aaa">Estimated total</td><td style="padding:7px 8px;text-align:right;font-family:monospace;font-weight:700;border-top:2px solid #1b9aaa;color:#1b9aaa">${aed(set.total)}</td></tr>
+      </table>
+      <h3 style="color:#0E1A40;margin:0 0 6px">Company property</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">${assetRows}</table>
+      <h3 style="color:#0E1A40;margin:0 0 6px">Clearance checklist</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">${clr}</table>
+      <div style="margin-top:18px;color:#777;font-size:11px;border-top:1px solid #eee;padding-top:10px">This settlement is indicative and subject to final confirmation against MOHRE rules, notice-period adjustments and any outstanding dues. ${c.companyName||'CoreV | OxeFit'}${c.website?' \u00b7 '+c.website:''}</div>
+    </div>
+  </div>`;
+}
+function offReport(id){
+  const o=S.offboardings.find(x=>x.id===id);if(!o)return;const e=S.employees.find(x=>x.id===o.emp)||{};
+  const canEmail=isHR()&&e.email;
+  modal("Offboarding report \u2014 "+(e.name||''),`<div id="printArea">${offReportHTML(id)}</div>`,
+    [["Print / PDF","window.print()","g"]].concat(canEmail?[["Email to employee","emailOffReport('"+id+"')","g"]]:[]).concat([["Close","closeModal()","p"]]));
+}
+async function emailOffReport(id){
+  const o=S.offboardings.find(x=>x.id===id);if(!o)return;const e=S.employees.find(x=>x.id===o.emp)||{};
+  if(!e.email){flash("No employee email on file");return;}
+  const intro=`<p style="font-family:Arial">Dear ${e.name||''},</p><p style="font-family:Arial">Please find your offboarding summary below, including the clearance progress and the estimated final settlement. Kindly review and contact HR with any questions.</p>`;
+  const ok=await sendMailHtml(e.email,"Your offboarding report \u2014 "+(c=>c?c.companyName:'CoreV | OxeFit')(S.settings),intro+offReportHTML(id));
+  flash(ok?("Report emailed to "+e.name):"Email not sent (sign in / check Mail.Send)");
+}
 /* ---------- Annual tickets (entitlement, due & liability) ---------- */
 function addMonths(d,m){const x=new Date(d);x.setMonth(x.getMonth()+m);return x;}
 function ticketCycle(){return +S.settings.ticketCycle||12;}
