@@ -243,7 +243,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.32<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.33<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -363,10 +363,10 @@ function accruedInYear(emp,yr){
   const hire=D(emp.start); const jan1=new Date(yr,0,1); const dec31=new Date(yr,11,31);
   const start=hire>jan1?hire:jan1; const end=(yr===today().getFullYear())?today():dec31;
   if(end<start) return 0;
-  // Once an employee has completed 1 full year of service (before the start of this
-  // calendar year), the full 23-day entitlement is available from the first month —
+  // Once an employee has completed 1 full year of service (as of today for the current
+  // year), the full 23-day entitlement is available from the first month —
   // no monthly proration. Only first-year employees accrue month-by-month.
-  if(addYears(hire,1)<=jan1) return 23;
+  if(addYears(hire,1)<=end) return 23;
   return Math.min(23, monthsFrac(start,end)*(23/12));
 }
 function annualBalance(emp){
