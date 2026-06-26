@@ -243,7 +243,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.34<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.35<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -1080,7 +1080,6 @@ const MANAGER_MAP={
  jawdat:{name:"Kamal Shanableh",email:"kamal@core-velocity.com"},
  fatima:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
  marios:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
- connor:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
  gladys:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
  charlie:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
  prem:{name:"Ahmed Abuhakmeh",email:"ahmed@core-velocity.com"},
@@ -1688,19 +1687,19 @@ function rKeyFeatures(){
 const SALES_FUNCS=["B2B Sales Lead MGMT Per Sector","Growth Sales Pipeline & Forecasting","Building Business Use-Cases per Sector","Engaging in Demos, Events & Awareness","Customer Networking & Relationship"];
 const ORG=[
  {partner:"Kamal Shanableh",title:"Managing Partner",groups:[
-   {name:"Southern UAE Sales",people:[{n:"Wafiq",r:"Sales"},{n:"Jawdat",r:"Sales"},{n:"Connor",r:"Business Development"},{n:"Hussean",r:"Sales"}],funcs:SALES_FUNCS}
+   {name:"Southern UAE Sales",people:[{n:"Wafiq",r:"Sales"},{n:"Jawdat",r:"Sales"},{n:"Hussean",r:"Sales"}],funcs:SALES_FUNCS}
  ]},
  {partner:"Sami Idbeis",title:"Managing Partner",groups:[
    {name:"Northern UAE Sales",people:[{n:"Fatima",r:"Business Development"},{n:"Hasan",r:"Sales"},{n:"Marios",r:"Business Development"},{n:"Katy",r:"Sales"},{n:"Milene",r:"Sales"}],funcs:SALES_FUNCS}
  ]},
  {partner:"Ahmed Abuhakmeh",title:"Managing Partner",groups:[
-   {name:"B2C Sales & Demo",people:[{n:"Fatima",r:"ISR"},{n:"Marios",r:"ISR"},{n:"Connor",r:"ISR"}],funcs:["B2C & Online MGMT","Customer Query / Questions","Remote & Physical Demos (B2C/B2B)","Post-Sales Training for B2B/B2C","Quotations Creation"]},
+   {name:"B2C Sales & Demo",people:[{n:"Fatima",r:"ISR"},{n:"Marios",r:"ISR"}],funcs:["B2C & Online MGMT","Customer Query / Questions","Remote & Physical Demos (B2C/B2B)","Post-Sales Training for B2B/B2C","Quotations Creation"]},
    {name:"Administration",people:[{n:"Gladys",r:"Office Manager"}],funcs:["PRO","Office Logistics","Accounting","HR","Marketing","Reporting","Client DB","Post-Sales Customer Care"]},
    {name:"Delivery & Post-Sales Services",people:[{n:"Charlie",r:"Technician"},{n:"Prem",r:"Technician"}],funcs:["Warehouse MGMT","Delivery & Logistics","Spare MGMT","Warranty Tracking","Maintenance & Repair","Support"]}
  ]}
 ];
 function rOrg(){
- view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">How <b>CoreV | OxeFit</b> operates today \u2014 three Managing Partners over the two sales regions and the B2C / Administration / Delivery functions. People-management lines feed the Performance tab, so reviews route to the right partner (Kamal \u2192 Wafiq, Jawdat, Hussean; Sami \u2192 Hasan, Katy, Milene; Ahmed \u2192 Fatima, Marios, Connor, Gladys, Charlie, Prem).</div>
+ view.innerHTML=`<div class="card" style="background:var(--teal-wash);border-color:#C3C9EC">How <b>CoreV | OxeFit</b> operates today \u2014 three Managing Partners over the two sales regions and the B2C / Administration / Delivery functions. People-management lines feed the Performance tab, so reviews route to the right partner (Kamal \u2192 Wafiq, Jawdat, Hussean; Sami \u2192 Hasan, Katy, Milene; Ahmed \u2192 Fatima, Marios, Gladys, Charlie, Prem).</div>
  <div class="org-wrap">${ORG.map(col=>`<div class="org-col">
    <div class="org-partner">${col.partner}<small>${col.title}</small></div>
    ${col.groups.map(g=>`<div class="org-group"><div class="org-gh">${g.name}</div>
@@ -1708,7 +1707,7 @@ function rOrg(){
      ${(g.funcs||[]).map(f=>`<div class="org-func">${f}</div>`).join("")}
    </div>`).join("")}
  </div>`).join("")}</div>
- <div class="hint" style="margin-top:10px">Note: Fatima, Marios and Connor appear in both their sales region and the B2C / Demo team (dual role), as in the company chart.</div>`;
+ <div class="hint" style="margin-top:10px">Note: Fatima and Marios appear in both their sales region and the B2C / Demo team (dual role), as in the company chart.</div>`;
 }
 
 /* ---------- Company Handbook (reference) ---------- */
