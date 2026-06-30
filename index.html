@@ -243,7 +243,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.35<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.36<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -1499,8 +1499,7 @@ function rSuppliers(){
   const cm=curMonth(),ym=supMonth||cm;
   const totalMonthly=list.reduce((s,x)=>s+(+x.monthlyExpense||0),0);
   const payable=list.filter(x=>(+x.monthlyExpense||0)>0);
-  const pend=payable.filter(x=>!supPaid(x,cm));
-  const pendTotal=pend.reduce((s,x)=>s+(+x.monthlyExpense||0),0);
+  const sd=suppliersDue();const dueCount=sd.dueInv.length+sd.recurring.length;
   const dueList=list.map(x=>({x,nd:supNextDue(x)})).filter(o=>o.nd).sort((a,b)=>a.nd.days-b.nd.days);
   const next=dueList[0];
   const nextTxt=next?`${next.x.business||next.x.name} \u00b7 ${next.nd.days<0?(-next.nd.days)+'d overdue':(next.nd.days===0?'today':'in '+next.nd.days+'d')}`:'\u2014';
@@ -1508,7 +1507,7 @@ function rSuppliers(){
    <div class="grid cards" style="margin-bottom:6px">
      <div class="card stat"><div class="k">Suppliers</div><div class="v">${list.length}</div></div>
      <div class="card stat"><div class="k">Total monthly spend</div><div class="v" style="font-size:22px;color:var(--teal)">${aed(totalMonthly)}</div></div>
-     <div class="card stat" style="${pendTotal>0?'background:var(--teal-wash);border-color:#C3C9EC':''}"><div class="k">Pending this month</div><div class="v" style="font-size:22px">${aed(pendTotal)}</div><div class="sub">${pend.length} supplier${pend.length===1?'':'s'} unpaid</div></div>
+     <div class="card stat" style="${sd.total>0?'background:var(--teal-wash);border-color:#C3C9EC':''}"><div class="k">Pending payments</div><div class="v" style="font-size:22px">${aed(sd.total)}</div><div class="sub">${dueCount} payment${dueCount===1?'':'s'} due${sd.dueInv.length?' · '+sd.dueInv.length+' unpaid invoice'+(sd.dueInv.length===1?'':'s'):''}</div></div>
      <div class="card stat"><div class="k">Next payment due</div><div class="v" style="font-size:15px;color:var(--teal)">${nextTxt}</div>${next?`<div class="sub">${prettyD(_ymd(next.nd.date))}</div>`:''}</div>
    </div>
    <div class="sec-h"><h2>Monthly payment tracker</h2><div class="flex" style="gap:8px;align-items:center"><select onchange="setSupMonth(this.value)" style="max-width:150px">${supMonthOptions().map(m=>`<option value="${m}" ${m===ym?'selected':''}>${monthLabel(m)}</option>`).join("")}</select>${isHR()?`<button class="btn g" onclick="invoiceForm()">+ Add invoice</button> <button class="btn p" onclick="supplierForm()">+ Add supplier</button>`:''}</div></div>
