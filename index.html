@@ -243,7 +243,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.40<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.41<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -443,6 +443,7 @@ function expBadge(days){if(days<0)return`<span class="badge b-red">Expired ${-da
 
 /* ---------- Dashboard ---------- */
 function rDash(){
+  if(isHR())refreshFin();
   const emps=visibleEmps();
   const allExp=[];emps.forEach(e=>expiries(e).forEach(x=>{if(x.days<=60)allExp.push({...x,emp:e})}));
   allExp.sort((a,b)=>a.days-b.days);
@@ -1514,14 +1515,17 @@ function finPaid(supId,ym){const f=HRFINSTATUS['sup-'+supId+'-'+ym];return !!(f&
 function finPaidOn(supId,ym){const f=HRFINSTATUS['sup-'+supId+'-'+ym];return f&&f.on?f.on:'';}
 function invPaid(i){return finPaid(i.sup,invMonth(i.date));}
 function supPaid(x,ym){return finPaid(x.id,ym);}
+let _finLast=0;
 async function pullFinStatus(){
-  try{ if(!msalAccount)return; const tok=await getAccessToken();
+  try{ if(!msalAccount)return false; const tok=await getAccessToken();
     const folder=ONEDRIVE_CONFIG.filePath.replace(/\/[^/]*$/,"");const upn=ONEDRIVE_CONFIG.sharedDriveUser;
     const base=upn?`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:`:`https://graph.microsoft.com/v1.0/me/drive/root:`;
     const res=await fetch(`${base}${folder}/corev-payables-status.json:/content`,{headers:{Authorization:"Bearer "+tok}});
-    if(!res.ok)return; const st=await res.json(); HRFINSTATUS=(st&&st.status)||{};
-  }catch(e){}
+    if(!res.ok)return false; const st=await res.json(); const next=(st&&st.status)||{};
+    const changed=JSON.stringify(next)!==JSON.stringify(HRFINSTATUS); HRFINSTATUS=next; return changed;
+  }catch(e){ return false; }
 }
+function refreshFin(force){ const now=Date.now(); if(!force&&now-_finLast<4000)return; _finLast=now; pullFinStatus().then(ch=>{ if(ch||force)renderCurrent(); if(force)flash("Synced payment status from Finance"); }); }
 let _pubT=null;
 function schedulePublish(){ if(!isHR()||!msalAccount)return; clearTimeout(_pubT); _pubT=setTimeout(()=>{try{publishPayablesFeed(true);}catch(_){}},1500); }
 function supDueDate(x,ym){if(!x.dueDay)return null;const a=ym.split('-').map(Number),last=new Date(a[0],a[1],0).getDate();return new Date(a[0],a[1]-1,Math.min(+x.dueDay,last));}
@@ -1529,6 +1533,7 @@ function supNextDue(x){if(!x.dueDay)return null;const t=today(),cm=curMonth();le
 function supStatusBadge(x,ym){const due=supDueDate(x,ym);if(supPaid(x,ym)){const on=finPaidOn(x.id,ym);return `<span class="badge b-green">Paid${on?' \u00b7 '+prettyD(on):''}</span>`;}const od=due&&ym<=curMonth()&&daysBetween(today(),due)<0;return `<span class="badge ${od?'b-red':'b-amber'}">${od?'Overdue':'Pending'}</span>`;}
 function toggleSupplierPaid(id,ym){if(!isHR())return;const x=S.suppliers.find(o=>o.id===id);if(!x)return;x.payments=x.payments||{};if(supPaid(x,ym))delete x.payments[ym];else x.payments[ym]={paid:true,on:_ymd(today()),amount:+x.monthlyExpense||0};x._ts=Date.now();dbSet();setView("suppliers");}
 function rSuppliers(){
+  refreshFin();
   const list=(S.suppliers||[]).slice().sort((a,b)=>((a.business||a.name||'').toLowerCase()).localeCompare((b.business||b.name||'').toLowerCase()));
   const cm=curMonth(),ym=supMonth||cm;
   const totalMonthly=list.reduce((s,x)=>s+(+x.monthlyExpense||0),0);
@@ -1544,7 +1549,7 @@ function rSuppliers(){
      <div class="card stat" style="${sd.total>0?'background:var(--teal-wash);border-color:#C3C9EC':''}"><div class="k">Pending payments</div><div class="v" style="font-size:22px">${aed(sd.total)}</div><div class="sub">${dueCount} payment${dueCount===1?'':'s'} due${sd.dueInv.length?' · '+sd.dueInv.length+' unpaid invoice'+(sd.dueInv.length===1?'':'s'):''}</div></div>
      <div class="card stat"><div class="k">Next payment due</div><div class="v" style="font-size:15px;color:var(--teal)">${nextTxt}</div>${next?`<div class="sub">${prettyD(_ymd(next.nd.date))}</div>`:''}</div>
    </div>
-   ${isHR()?`<div class="flex" style="gap:8px;flex-wrap:wrap;margin:2px 0 12px"><span class="muted" style="align-self:center;font-size:12px">Finance integration — payables feed:</span><button class="btn g sm" onclick="publishPayablesFeed()">Publish to OneDrive feed</button><button class="btn g sm" onclick="exportPayablesJSON()">Export JSON</button><button class="btn g sm" onclick="exportPayablesCSV()">Export CSV</button></div>`:''}
+   ${isHR()?`<div class="flex" style="gap:8px;flex-wrap:wrap;margin:2px 0 12px"><span class="muted" style="align-self:center;font-size:12px">Finance integration — payables feed:</span><button class="btn g sm" onclick="refreshFin(true)">Refresh from Finance</button><button class="btn g sm" onclick="publishPayablesFeed()">Publish to OneDrive feed</button><button class="btn g sm" onclick="exportPayablesJSON()">Export JSON</button><button class="btn g sm" onclick="exportPayablesCSV()">Export CSV</button></div>`:''}
    <div class="sec-h"><h2>Monthly payment tracker</h2><div class="flex" style="gap:8px;align-items:center"><select onchange="setSupMonth(this.value)" style="max-width:150px">${supMonthOptions().map(m=>`<option value="${m}" ${m===ym?'selected':''}>${monthLabel(m)}</option>`).join("")}</select>${isHR()?`<button class="btn g" onclick="invoiceForm()">+ Add invoice</button> <button class="btn p" onclick="supplierForm()">+ Add supplier</button>`:''}</div></div>
    <div class="tablewrap">${payable.length?`<table><thead><tr><th>Supplier</th><th class="right">Amount</th><th>Trigger date</th><th>Status</th>${isHR()?'<th class="right"></th>':''}</tr></thead><tbody>
    ${payable.map(x=>{const due=supDueDate(x,ym);const paid=supPaid(x,ym);return `<tr><td><b>${x.business||x.name||'\u2014'}</b></td><td class="right mono">${aed(+x.monthlyExpense||0)}</td><td class="mono">${x.dueDay?prettyD(_ymd(due)):'<span class="muted">no due day</span>'}</td><td>${supStatusBadge(x,ym)}</td>${isHR()?`<td class="right"><span class="muted" style="font-size:11px">set in Finance</span></td>`:''}</tr>`;}).join("")}
