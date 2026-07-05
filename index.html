@@ -244,7 +244,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.37<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.39<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -1531,6 +1531,7 @@ function rSuppliers(){
      <div class="card stat" style="${sd.total>0?'background:var(--teal-wash);border-color:#C3C9EC':''}"><div class="k">Pending payments</div><div class="v" style="font-size:22px">${aed(sd.total)}</div><div class="sub">${dueCount} payment${dueCount===1?'':'s'} due${sd.dueInv.length?' · '+sd.dueInv.length+' unpaid invoice'+(sd.dueInv.length===1?'':'s'):''}</div></div>
      <div class="card stat"><div class="k">Next payment due</div><div class="v" style="font-size:15px;color:var(--teal)">${nextTxt}</div>${next?`<div class="sub">${prettyD(_ymd(next.nd.date))}</div>`:''}</div>
    </div>
+   ${isHR()?`<div class="flex" style="gap:8px;flex-wrap:wrap;margin:2px 0 12px"><span class="muted" style="align-self:center;font-size:12px">Finance integration — payables feed:</span><button class="btn g sm" onclick="publishPayablesFeed()">Publish to OneDrive feed</button><button class="btn g sm" onclick="exportPayablesJSON()">Export JSON</button><button class="btn g sm" onclick="exportPayablesCSV()">Export CSV</button></div>`:''}
    <div class="sec-h"><h2>Monthly payment tracker</h2><div class="flex" style="gap:8px;align-items:center"><select onchange="setSupMonth(this.value)" style="max-width:150px">${supMonthOptions().map(m=>`<option value="${m}" ${m===ym?'selected':''}>${monthLabel(m)}</option>`).join("")}</select>${isHR()?`<button class="btn g" onclick="invoiceForm()">+ Add invoice</button> <button class="btn p" onclick="supplierForm()">+ Add supplier</button>`:''}</div></div>
    <div class="tablewrap">${payable.length?`<table><thead><tr><th>Supplier</th><th class="right">Amount</th><th>Trigger date</th><th>Status</th>${isHR()?'<th class="right"></th>':''}</tr></thead><tbody>
    ${payable.map(x=>{const due=supDueDate(x,ym);const paid=supPaid(x,ym);return `<tr><td><b>${x.business||x.name||'\u2014'}</b></td><td class="right mono">${aed(+x.monthlyExpense||0)}</td><td class="mono">${x.dueDay?prettyD(_ymd(due)):'<span class="muted">no due day</span>'}</td><td>${supStatusBadge(x,ym)}</td>${isHR()?`<td class="right"><button class="btn ${paid?'g':'p'} sm" onclick="toggleSupplierPaid('${x.id}','${ym}')">${paid?'Mark unpaid':'Mark paid'}</button></td>`:''}</tr>`;}).join("")}
@@ -1558,6 +1559,39 @@ function invMonth(d){return (d||'').slice(0,7);}
 function invoicesFor(supId){return (S.invoices||[]).filter(i=>i.sup===supId);}
 function invoicesForMonth(supId,ym){return (S.invoices||[]).filter(i=>i.sup===supId&&invMonth(i.date)===ym);}
 function invTotalMonth(ym){return (S.invoices||[]).filter(i=>invMonth(i.date)===ym).reduce((s,i)=>s+(+i.amount||0),0);}
+function payablesData(){
+  const out=[];const months=supMonthOptions();
+  (S.suppliers||[]).forEach(x=>{ if((+x.monthlyExpense||0)>0 && x.dueDay){ months.forEach(ym=>{
+      if(invoicesForMonth(x.id,ym).length) return; // an invoice already represents this month's payable
+      const due=supDueDate(x,ym),paid=supPaid(x,ym);
+      out.push({id:"sup-"+x.id+"-"+ym,source:"HR:supplier-recurring",month:ym,supplierId:x.id,supplier:x.business||x.name||"",category:"Supplier",description:"Monthly payment",amount:+x.monthlyExpense||0,dueDate:due?_ymd(due):"",status:paid?"Paid":(due&&daysBetween(today(),due)<0?"Overdue":"Pending"),paidOn:(x.payments&&x.payments[ym]&&x.payments[ym].on)||"",iban:(x.bankDetails||"")});
+    });}});
+  (S.invoices||[]).forEach(i=>{const x=(S.suppliers||[]).find(z=>z.id===i.sup)||{};
+    out.push({id:"inv-"+i.id,source:"HR:supplier-invoice",month:invMonth(i.date),supplierId:i.sup,supplier:x.business||x.name||"",category:"Supplier",description:i.note||"Invoice",amount:+i.amount||0,dueDate:i.date||"",status:i.paid?"Paid":"Due",paidOn:i.paidOn||"",reference:i.note||"",fileUrl:i.webUrl||""});});
+  return out.sort((a,b)=>(b.month||"").localeCompare(a.month||"")||(a.dueDate||"").localeCompare(b.dueDate||""));
+}
+function payablesConsolidated(){
+  const map={};
+  payablesData().forEach(r=>{const k=r.supplierId+"|"+r.month;if(!map[k])map[k]={month:r.month,supplierId:r.supplierId,supplier:r.supplier,amount:0,count:0,dueDate:r.dueDate||"",statuses:[]};const m=map[k];m.amount+=(+r.amount||0);m.count++;m.statuses.push(r.status);if(r.dueDate&&(!m.dueDate||r.dueDate<m.dueDate))m.dueDate=r.dueDate;});
+  return Object.values(map).map(m=>{const anyUnpaid=m.statuses.some(s=>s!=="Paid");const overdue=m.statuses.some(s=>s==="Overdue")||(m.dueDate&&anyUnpaid&&daysBetween(today(),D(m.dueDate))<0);
+    return {id:"sup-"+m.supplierId+"-"+m.month,source:"HR:supplier-consolidated",category:"Supplier",month:m.month,supplierId:m.supplierId,supplier:m.supplier,description:m.count+" item"+(m.count===1?"":"s"),amount:m.amount,dueDate:m.dueDate,status:!anyUnpaid?"Paid":(overdue?"Overdue":"Pending")};
+  }).sort((a,b)=>(b.month||"").localeCompare(a.month||"")||(a.supplier||"").localeCompare(b.supplier||""));
+}
+function payablesFeed(){return {generated:new Date().toISOString(),source:"CoreV | OxeFit HR Portal",company:S.settings.companyName||"Core Velocity Sport Machine Trading L.L.C",currency:"AED",schema:"corev.payables/v1",consolidated:payablesConsolidated(),payables:payablesData()};}
+function dlFile(name,content,mime){try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type:mime||"text/plain"}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}catch(e){alert("Download failed");}}
+function exportPayablesJSON(){dlFile("corev-payables.json",JSON.stringify(payablesFeed(),null,2),"application/json");flash("Payables JSON downloaded");}
+function exportPayablesCSV(){const rows=payablesData();const cols=["month","supplier","category","description","amount","dueDate","status","paidOn"];const csv=[cols.join(",")].concat(rows.map(r=>cols.map(c=>`"${String(r[c]==null?"":r[c]).replace(/"/g,'""')}"`).join(","))).join("\n");dlFile("corev-payables.csv",csv,"text/csv");flash("Payables CSV downloaded");}
+async function publishPayablesFeed(){
+  if(!msalAccount){flash("Sign in with Microsoft to publish the feed.");return;}
+  flash("Publishing feed\u2026");
+  try{const tok=await getAccessToken();
+    const folder=ONEDRIVE_CONFIG.filePath.replace(/\/[^/]*$/,"");const upn=ONEDRIVE_CONFIG.sharedDriveUser;
+    const base=upn?`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:`:`https://graph.microsoft.com/v1.0/me/drive/root:`;
+    const res=await fetch(`${base}${folder}/corev-payables.json:/content`,{method:"PUT",headers:{Authorization:"Bearer "+tok,"Content-Type":"application/json"},body:JSON.stringify(payablesFeed(),null,2)});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    flash("Feed published \u2192 OXEFIT/corev-payables.json");
+  }catch(e){flash("Publish failed (check shared-drive access)");}
+}
 function invoiceForm(supId){
   if(!isHR()){alert("Only admin/full-access can add invoices.");return;}
   if(!S.suppliers.length){alert("Add a supplier first.");return;}
