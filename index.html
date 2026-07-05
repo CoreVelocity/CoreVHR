@@ -244,7 +244,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.39<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.40<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -474,8 +474,8 @@ function rDash(){
      const rows=ds.map(x=>`<tr><td><b>${x.d.docType||x.d.name||'\u2014'}</b>${x.d.name&&x.d.docType?(' <span class="muted">'+x.d.name+'</span>'):''}</td><td class="mono">${prettyD(x.d.expiry)}</td><td><span class="badge ${x.days<0?'b-red':(x.days<=30?'b-amber':'b-grey')}">${x.days<0?(-x.days)+'d overdue':'in '+x.days+'d'}</span></td></tr>`).join("");
      return `<div class="sec-h"><h2>Company documents \u2014 expiring</h2></div><div class="tablewrap"><table><thead><tr><th>Document</th><th>Expiry</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;})()}
    ${(()=>{ if(!isHR())return ''; const sd=suppliersDue(); if(!sd.dueInv.length&&!sd.recurring.length)return '';
-     const invRows=sd.dueInv.map(o=>{const age=o.i.date?daysBetween(D(o.i.date),today()):0;return `<tr><td><b>${o.x.business||o.x.name||'\u2014'}</b></td><td>Invoice ${o.i.date?prettyD(o.i.date):''}${o.i.note?' \u00b7 '+o.i.note:''}</td><td class="right mono">${aed(+o.i.amount||0)}</td><td><span class="badge ${age>30?'b-red':'b-amber'}">${age>30?age+'d overdue':'Due'}</span></td><td class="right"><button class="btn p sm" onclick="toggleInvoicePaid('${o.i.id}')">Mark paid</button></td></tr>`;}).join("");
-     const recRows=sd.recurring.map(o=>`<tr><td><b>${o.x.business||o.x.name||'\u2014'}</b></td><td>Monthly payment (day ${o.x.dueDay})</td><td class="right mono">${aed(+o.x.monthlyExpense||0)}</td><td>${o.nd?`<span class="badge ${o.nd.days<0?'b-red':(o.nd.days<=7?'b-amber':'b-grey')}">${o.nd.days<0?(-o.nd.days)+'d overdue':(o.nd.days===0?'today':'in '+o.nd.days+'d')}</span>`:'\u2014'}</td><td class="right"><button class="btn p sm" onclick="toggleSupplierPaid('${o.x.id}','${sd.cm}')">Mark paid</button></td></tr>`).join("");
+     const invRows=sd.dueInv.map(o=>{const age=o.i.date?daysBetween(D(o.i.date),today()):0;return `<tr><td><b>${o.x.business||o.x.name||'\u2014'}</b></td><td>Invoice ${o.i.date?prettyD(o.i.date):''}${o.i.note?' \u00b7 '+o.i.note:''}</td><td class="right mono">${aed(+o.i.amount||0)}</td><td><span class="badge ${age>30?'b-red':'b-amber'}">${age>30?age+'d overdue':'Due'}</span></td><td class="right"><span class="muted" style="font-size:11px">Finance</span></td></tr>`;}).join("");
+     const recRows=sd.recurring.map(o=>`<tr><td><b>${o.x.business||o.x.name||'\u2014'}</b></td><td>Monthly payment (day ${o.x.dueDay})</td><td class="right mono">${aed(+o.x.monthlyExpense||0)}</td><td>${o.nd?`<span class="badge ${o.nd.days<0?'b-red':(o.nd.days<=7?'b-amber':'b-grey')}">${o.nd.days<0?(-o.nd.days)+'d overdue':(o.nd.days===0?'today':'in '+o.nd.days+'d')}</span>`:'\u2014'}</td><td class="right"><span class="muted" style="font-size:11px">Finance</span></td></tr>`).join("");
      return `<div class="sec-h"><h2>Supplier payments due</h2><span class="tag">${aed(sd.total)} due</span></div><div class="tablewrap"><table><thead><tr><th>Supplier</th><th>Payment</th><th class="right">Amount</th><th>Status</th><th class="right"></th></tr></thead><tbody>${invRows}${recRows}</tbody></table></div>`;})()}
    ${(()=>{ const emps=isHR()?S.employees.filter(e=>e.status!=="Exited"):S.employees.filter(e=>e.id===selfId()); if(!emps.length)return '';
      const rows=emps.map(e=>{const sm=leaveSumYear(e);return `<tr data-n="${(e.name||'').toLowerCase()}"><td class="emp-name">${e.name}</td><td class="right mono">${fmt1(sm.annualTaken)} / ${fmt1(sm.annualBal)}</td><td class="right mono">${sm.sick}</td><td class="right mono">${sm.unpaid}</td></tr>`;}).join("");
@@ -935,7 +935,7 @@ function saveSettings(){["companyName","tradeLicense","phone","address","signato
 async function wipe(){if(!confirm("Delete ALL portal data, including from the shared OneDrive file? This cannot be undone."))return;["employees","leaves","weekend","toil","letters","assets","docs"].forEach(k=>S[k]=[]);dbSet();updateBadges();applyRoleUI();setView("dash");flash("All data cleared");}
 
 /* ---------- generic ---------- */
-function delItem(coll,id,vname){if(!confirm("Delete this entry?"))return;S.tombstones=S.tombstones||{};S.tombstones[id]=Date.now();S[coll]=S[coll].filter(x=>x.id!==id);dbSet(coll,S[coll]);updateBadges();setView(vname==='leave'?'leave':vname==='toil'?'toil':vname);}
+function delItem(coll,id,vname){if(!confirm("Delete this entry?"))return;S.tombstones=S.tombstones||{};S.tombstones[id]=Date.now();S[coll]=S[coll].filter(x=>x.id!==id);dbSet(coll,S[coll]);if(coll==='suppliers'||coll==='invoices')schedulePublish();updateBadges();setView(vname==='leave'?'leave':vname==='toil'?'toil':vname);}
 function flash(msg){const d=document.createElement("div");d.textContent=msg;d.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;z-index:99;box-shadow:var(--shadow)";document.body.appendChild(d);setTimeout(()=>d.remove(),1600);}
 
 /* ---------- Monthly salaries (admin) ---------- */
@@ -1510,10 +1510,24 @@ function _ymd(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,
 function curMonth(){const t=today();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}`;}
 function monthLabel(ym){const a=ym.split('-').map(Number);return new Date(a[0],a[1]-1,1).toLocaleDateString("en-GB",{month:"short",year:"numeric"});}
 function supMonthOptions(){const t=today(),out=[];for(let i=0;i<12;i++){const d=new Date(t.getFullYear(),t.getMonth()-i,1);out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}return out;}
-function supPaid(x,ym){return !!(x.payments&&x.payments[ym]&&x.payments[ym].paid);}
+let HRFINSTATUS={};
+function finPaid(supId,ym){const f=HRFINSTATUS['sup-'+supId+'-'+ym];return !!(f&&f.paid);}
+function finPaidOn(supId,ym){const f=HRFINSTATUS['sup-'+supId+'-'+ym];return f&&f.on?f.on:'';}
+function invPaid(i){return finPaid(i.sup,invMonth(i.date));}
+function supPaid(x,ym){return finPaid(x.id,ym);}
+async function pullFinStatus(){
+  try{ if(!msalAccount)return; const tok=await getAccessToken();
+    const folder=ONEDRIVE_CONFIG.filePath.replace(/\/[^/]*$/,"");const upn=ONEDRIVE_CONFIG.sharedDriveUser;
+    const base=upn?`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:`:`https://graph.microsoft.com/v1.0/me/drive/root:`;
+    const res=await fetch(`${base}${folder}/corev-payables-status.json:/content`,{headers:{Authorization:"Bearer "+tok}});
+    if(!res.ok)return; const st=await res.json(); HRFINSTATUS=(st&&st.status)||{};
+  }catch(e){}
+}
+let _pubT=null;
+function schedulePublish(){ if(!isHR()||!msalAccount)return; clearTimeout(_pubT); _pubT=setTimeout(()=>{try{publishPayablesFeed(true);}catch(_){}},1500); }
 function supDueDate(x,ym){if(!x.dueDay)return null;const a=ym.split('-').map(Number),last=new Date(a[0],a[1],0).getDate();return new Date(a[0],a[1]-1,Math.min(+x.dueDay,last));}
 function supNextDue(x){if(!x.dueDay)return null;const t=today(),cm=curMonth();let ym=cm;if(supPaid(x,cm)){const nm=new Date(t.getFullYear(),t.getMonth()+1,1);ym=`${nm.getFullYear()}-${String(nm.getMonth()+1).padStart(2,'0')}`;}const d=supDueDate(x,ym);return {date:d,days:daysBetween(today(),d),ym};}
-function supStatusBadge(x,ym){const due=supDueDate(x,ym);if(supPaid(x,ym))return `<span class="badge b-green">Paid${x.payments[ym].on?' \u00b7 '+prettyD(x.payments[ym].on):''}</span>`;const od=due&&ym<=curMonth()&&daysBetween(today(),due)<0;return `<span class="badge ${od?'b-red':'b-amber'}">${od?'Overdue':'Pending'}</span>`;}
+function supStatusBadge(x,ym){const due=supDueDate(x,ym);if(supPaid(x,ym)){const on=finPaidOn(x.id,ym);return `<span class="badge b-green">Paid${on?' \u00b7 '+prettyD(on):''}</span>`;}const od=due&&ym<=curMonth()&&daysBetween(today(),due)<0;return `<span class="badge ${od?'b-red':'b-amber'}">${od?'Overdue':'Pending'}</span>`;}
 function toggleSupplierPaid(id,ym){if(!isHR())return;const x=S.suppliers.find(o=>o.id===id);if(!x)return;x.payments=x.payments||{};if(supPaid(x,ym))delete x.payments[ym];else x.payments[ym]={paid:true,on:_ymd(today()),amount:+x.monthlyExpense||0};x._ts=Date.now();dbSet();setView("suppliers");}
 function rSuppliers(){
   const list=(S.suppliers||[]).slice().sort((a,b)=>((a.business||a.name||'').toLowerCase()).localeCompare((b.business||b.name||'').toLowerCase()));
@@ -1534,7 +1548,7 @@ function rSuppliers(){
    ${isHR()?`<div class="flex" style="gap:8px;flex-wrap:wrap;margin:2px 0 12px"><span class="muted" style="align-self:center;font-size:12px">Finance integration — payables feed:</span><button class="btn g sm" onclick="publishPayablesFeed()">Publish to OneDrive feed</button><button class="btn g sm" onclick="exportPayablesJSON()">Export JSON</button><button class="btn g sm" onclick="exportPayablesCSV()">Export CSV</button></div>`:''}
    <div class="sec-h"><h2>Monthly payment tracker</h2><div class="flex" style="gap:8px;align-items:center"><select onchange="setSupMonth(this.value)" style="max-width:150px">${supMonthOptions().map(m=>`<option value="${m}" ${m===ym?'selected':''}>${monthLabel(m)}</option>`).join("")}</select>${isHR()?`<button class="btn g" onclick="invoiceForm()">+ Add invoice</button> <button class="btn p" onclick="supplierForm()">+ Add supplier</button>`:''}</div></div>
    <div class="tablewrap">${payable.length?`<table><thead><tr><th>Supplier</th><th class="right">Amount</th><th>Trigger date</th><th>Status</th>${isHR()?'<th class="right"></th>':''}</tr></thead><tbody>
-   ${payable.map(x=>{const due=supDueDate(x,ym);const paid=supPaid(x,ym);return `<tr><td><b>${x.business||x.name||'\u2014'}</b></td><td class="right mono">${aed(+x.monthlyExpense||0)}</td><td class="mono">${x.dueDay?prettyD(_ymd(due)):'<span class="muted">no due day</span>'}</td><td>${supStatusBadge(x,ym)}</td>${isHR()?`<td class="right"><button class="btn ${paid?'g':'p'} sm" onclick="toggleSupplierPaid('${x.id}','${ym}')">${paid?'Mark unpaid':'Mark paid'}</button></td>`:''}</tr>`;}).join("")}
+   ${payable.map(x=>{const due=supDueDate(x,ym);const paid=supPaid(x,ym);return `<tr><td><b>${x.business||x.name||'\u2014'}</b></td><td class="right mono">${aed(+x.monthlyExpense||0)}</td><td class="mono">${x.dueDay?prettyD(_ymd(due)):'<span class="muted">no due day</span>'}</td><td>${supStatusBadge(x,ym)}</td>${isHR()?`<td class="right"><span class="muted" style="font-size:11px">set in Finance</span></td>`:''}</tr>`;}).join("")}
    </tbody></table>`:`<div class="empty"><b>No payable suppliers</b>Add a supplier with a monthly expense to track payments.</div>`}</div>
    <div class="sec-h"><h2>Monthly expense summary</h2><span class="tag">${aed(invTotalMonth(ym))} invoiced \u00b7 ${monthLabel(ym)}</span></div>
    <div class="tablewrap"><table><thead><tr><th>Supplier</th><th class="right">Invoices</th><th class="right">Invoiced (${monthLabel(ym)})</th><th class="right">Agreed monthly</th></tr></thead><tbody>
@@ -1551,7 +1565,7 @@ function rSuppliers(){
          <div><label>Agreement expiry</label><span class="mono">${x.agreementExpiry?prettyD(x.agreementExpiry):'\u2014'}</span></div>
          <div class="full"><label>Address</label>${x.address||'\u2014'}</div>
          <div class="full"><label>Bank details</label><span class="mono">${(x.bankDetails||'\u2014').replace(/</g,'&lt;')}</span></div>
-         <div class="full"><label>Invoices</label>${(()=>{const inv=invoicesFor(x.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));return inv.length?`<div style="margin-top:4px">${inv.slice(0,8).map(i=>`<div class="flex" style="justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line)"><span class="mono">${i.date?prettyD(i.date):'\u2014'} \u00b7 ${aed(+i.amount||0)}${i.note?' \u00b7 '+i.note:''} ${invBadge(i)}</span><span style="white-space:nowrap">${i.webUrl?`<a class="btn g sm" href="${i.webUrl}" target="_blank">Open</a>`:''}${isHR()?` <button class="btn ${i.paid?'g':'p'} sm" onclick="toggleInvoicePaid('${i.id}')">${i.paid?'Mark unpaid':'Mark paid'}</button> <button class="btn danger sm" onclick="delInvoice('${i.id}')">\u2715</button>`:''}</span></div>`).join("")}${inv.length>8?`<div class="muted" style="padding:4px 0">+${inv.length-8} more\u2026</div>`:''}</div>`:'<span class="muted">No invoices yet</span>';})()}${isHR()?`<div style="margin-top:8px"><button class="btn g sm" onclick="invoiceForm('${x.id}')">+ Add invoice</button></div>`:''}</div>
+         <div class="full"><label>Invoices</label>${(()=>{const inv=invoicesFor(x.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));return inv.length?`<div style="margin-top:4px">${inv.slice(0,8).map(i=>`<div class="flex" style="justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line)"><span class="mono">${i.date?prettyD(i.date):'\u2014'} \u00b7 ${aed(+i.amount||0)}${i.note?' \u00b7 '+i.note:''} ${invBadge(i)}</span><span style="white-space:nowrap">${i.webUrl?`<a class="btn g sm" href="${i.webUrl}" target="_blank">Open</a>`:''}${isHR()?` <button class="btn danger sm" onclick="delInvoice('${i.id}')">\u2715</button>`:''}</span></div>`).join("")}${inv.length>8?`<div class="muted" style="padding:4px 0">+${inv.length-8} more\u2026</div>`:''}</div>`:'<span class="muted">No invoices yet</span>';})()}${isHR()?`<div style="margin-top:8px"><button class="btn g sm" onclick="invoiceForm('${x.id}')">+ Add invoice</button></div>`:''}</div>
        </div></div>`;}).join("")
      :`<div class="empty"><b>No suppliers yet</b>${isHR()?'Add your office suppliers and vendors with their spend, due day and agreement details.':'Ask admin to add suppliers.'}</div>`}`;
 }
@@ -1567,7 +1581,7 @@ function payablesData(){
       out.push({id:"sup-"+x.id+"-"+ym,source:"HR:supplier-recurring",month:ym,supplierId:x.id,supplier:x.business||x.name||"",category:"Supplier",description:"Monthly payment",amount:+x.monthlyExpense||0,dueDate:due?_ymd(due):"",status:paid?"Paid":(due&&daysBetween(today(),due)<0?"Overdue":"Pending"),paidOn:(x.payments&&x.payments[ym]&&x.payments[ym].on)||"",iban:(x.bankDetails||"")});
     });}});
   (S.invoices||[]).forEach(i=>{const x=(S.suppliers||[]).find(z=>z.id===i.sup)||{};
-    out.push({id:"inv-"+i.id,source:"HR:supplier-invoice",month:invMonth(i.date),supplierId:i.sup,supplier:x.business||x.name||"",category:"Supplier",description:i.note||"Invoice",amount:+i.amount||0,dueDate:i.date||"",status:i.paid?"Paid":"Due",paidOn:i.paidOn||"",reference:i.note||"",fileUrl:i.webUrl||""});});
+    out.push({id:"inv-"+i.id,source:"HR:supplier-invoice",month:invMonth(i.date),supplierId:i.sup,supplier:x.business||x.name||"",category:"Supplier",description:i.note||"Invoice",amount:+i.amount||0,dueDate:i.date||"",status:invPaid(i)?"Paid":"Due",paidOn:finPaidOn(i.sup,invMonth(i.date)),reference:i.note||"",fileUrl:i.webUrl||""});});
   return out.sort((a,b)=>(b.month||"").localeCompare(a.month||"")||(a.dueDate||"").localeCompare(b.dueDate||""));
 }
 function payablesConsolidated(){
@@ -1581,16 +1595,16 @@ function payablesFeed(){return {generated:new Date().toISOString(),source:"CoreV
 function dlFile(name,content,mime){try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type:mime||"text/plain"}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}catch(e){alert("Download failed");}}
 function exportPayablesJSON(){dlFile("corev-payables.json",JSON.stringify(payablesFeed(),null,2),"application/json");flash("Payables JSON downloaded");}
 function exportPayablesCSV(){const rows=payablesData();const cols=["month","supplier","category","description","amount","dueDate","status","paidOn"];const csv=[cols.join(",")].concat(rows.map(r=>cols.map(c=>`"${String(r[c]==null?"":r[c]).replace(/"/g,'""')}"`).join(","))).join("\n");dlFile("corev-payables.csv",csv,"text/csv");flash("Payables CSV downloaded");}
-async function publishPayablesFeed(){
-  if(!msalAccount){flash("Sign in with Microsoft to publish the feed.");return;}
-  flash("Publishing feed\u2026");
+async function publishPayablesFeed(silent){
+  if(!msalAccount){if(!silent)flash("Sign in with Microsoft to publish the feed.");return;}
+  if(!silent)flash("Publishing feed\u2026");
   try{const tok=await getAccessToken();
     const folder=ONEDRIVE_CONFIG.filePath.replace(/\/[^/]*$/,"");const upn=ONEDRIVE_CONFIG.sharedDriveUser;
     const base=upn?`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(upn)}/drive/root:`:`https://graph.microsoft.com/v1.0/me/drive/root:`;
     const res=await fetch(`${base}${folder}/corev-payables.json:/content`,{method:"PUT",headers:{Authorization:"Bearer "+tok,"Content-Type":"application/json"},body:JSON.stringify(payablesFeed(),null,2)});
     if(!res.ok)throw new Error("HTTP "+res.status);
-    flash("Feed published \u2192 OXEFIT/corev-payables.json");
-  }catch(e){flash("Publish failed (check shared-drive access)");}
+    if(!silent)flash("Feed published \u2192 OXEFIT/corev-payables.json");
+  }catch(e){if(!silent)flash("Publish failed (check shared-drive access)");}
 }
 function invoiceForm(supId){
   if(!isHR()){alert("Only admin/full-access can add invoices.");return;}
@@ -1613,13 +1627,13 @@ async function saveInvoice(){
   let up;
   if(file){ if(!msalAccount){flash("Sign in with Microsoft to upload the file.");} else { flash("Uploading\u2026"); try{const item=await graphUploadTo("Invoices",file);up={webUrl:item.webUrl||"",itemId:item.id||"",fileName:file.name};}catch(e){flash("Upload failed (check shared-drive access)");return;} } }
   const rec={id:uid(),sup,date,amount,note,by:currentUser,at:new Date().toISOString(),_ts:Date.now()};if(up)Object.assign(rec,up);
-  S.invoices.push(rec);dbSet();closeModal();setView("suppliers");flash("Invoice added");
+  S.invoices.push(rec);dbSet();schedulePublish();closeModal();setView("suppliers");flash("Invoice added");
 }
 function delInvoice(id){if(!isHR())return;if(confirm("Remove this invoice?"))delItem('invoices',id,'suppliers');}
 function toggleInvoicePaid(id){if(!isHR())return;const i=(S.invoices||[]).find(x=>x.id===id);if(!i)return;if(i.paid){i.paid=false;i.paidOn="";}else{i.paid=true;i.paidOn=_ymd(today());}i._ts=Date.now();dbSet();setView(cur);}
-function invBadge(i){if(i.paid)return `<span class="badge b-green">Paid${i.paidOn?' \u00b7 '+prettyD(i.paidOn):''}</span>`;const age=i.date?daysBetween(D(i.date),today()):0;return `<span class="badge ${age>30?'b-red':'b-amber'}">${age>30?'Overdue':'Due'}</span>`;}
+function invBadge(i){if(invPaid(i)){const on=finPaidOn(i.sup,invMonth(i.date));return `<span class="badge b-green">Paid${on?' \u00b7 '+prettyD(on):''}</span>`;}const age=i.date?daysBetween(D(i.date),today()):0;return `<span class="badge ${age>30?'b-red':'b-amber'}">${age>30?'Overdue':'Due'}</span>`;}
 function suppliersDue(){const cm=curMonth();
-  const dueInv=(S.invoices||[]).filter(i=>!i.paid).map(i=>({i,x:(S.suppliers||[]).find(z=>z.id===i.sup)||{}})).sort((a,b)=>(a.i.date||'').localeCompare(b.i.date||''));
+  const dueInv=(S.invoices||[]).filter(i=>!invPaid(i)).map(i=>({i,x:(S.suppliers||[]).find(z=>z.id===i.sup)||{}})).sort((a,b)=>(a.i.date||'').localeCompare(b.i.date||''));
   const recurring=(S.suppliers||[]).filter(x=>(+x.monthlyExpense||0)>0&&x.dueDay&&!supPaid(x,cm)&&!invoicesForMonth(x.id,cm).length).map(x=>({x,nd:supNextDue(x)}));
   const total=dueInv.reduce((s,o)=>s+(+o.i.amount||0),0)+recurring.reduce((s,o)=>s+(+o.x.monthlyExpense||0),0);
   return {dueInv,recurring,total,cm};}
@@ -1651,7 +1665,7 @@ function saveSupplier(id){
   const o={business,name,contact:$("#sp_contact").value,monthlyExpense:+$("#sp_monthly").value||0,dueDay:+$("#sp_dueDay").value||0,agreementExpiry:$("#sp_expiry").value,address:$("#sp_address").value,bankDetails:$("#sp_bank").value,_ts:Date.now()};
   if(id){const r=S.suppliers.find(z=>z.id===id);if(r)Object.assign(r,o);}
   else{S.suppliers.push(Object.assign({id:uid(),by:currentUser,at:new Date().toISOString()},o));}
-  dbSet();closeModal();setView("suppliers");flash("Supplier saved");
+  dbSet();schedulePublish();closeModal();setView("suppliers");flash("Supplier saved");
 }
 function marketingCats(){
   const def=["Business Cards","Booklets","Pricing","Technical Material"];
@@ -2005,7 +2019,7 @@ function authorize(account){
   $("#loginScreen").style.display="none";
   $("#appRoot").classList.add("ready");
   applyLogo();applyRoleUI();updateBadges();setView("dash");
-  downloadFromOneDrive().then(()=>{applyLogo();applyRoleUI();updateBadges();renderCurrent();setTimeout(remindCerts,600);if(isHR())setTimeout(remindBirthdays,950);if(isAdmin()){notifyBirthdays(birthdaysToday());notifyTicketsDue();notifySuppliersDue();}if(isHR())setTimeout(remindTickets,1300);
+  downloadFromOneDrive().then(()=>{applyLogo();applyRoleUI();updateBadges();renderCurrent();pullFinStatus().then(()=>renderCurrent());if(isHR())setTimeout(schedulePublish,2500);setTimeout(remindCerts,600);if(isHR())setTimeout(remindBirthdays,950);if(isAdmin()){notifyBirthdays(birthdaysToday());notifyTicketsDue();notifySuppliersDue();}if(isHR())setTimeout(remindTickets,1300);
     if(!_pollStarted){_pollStarted=true;startPolling();}});
 }
 async function signOut(){
@@ -2109,7 +2123,7 @@ async function uploadToOneDrive(){
 function startPolling(){ setInterval(async()=>{
   if(!msalAccount||_uploadInFlight)return;
   try{const tok=await getAccessToken();const r=await fetchRemote(tok);
-    if(r.status===200&&r.data&&r.data._envelope){mergeState(r.data);saveLocal();renderCurrent();applyLogo();_accessError=false;updateSyncBanner();setSync("connected",syncedText());}}catch(_){}
+    if(r.status===200&&r.data&&r.data._envelope){mergeState(r.data);saveLocal();}await pullFinStatus();renderCurrent();applyLogo();_accessError=false;updateSyncBanner();setSync("connected",syncedText());}catch(_){}
 }, 15000); }
 async function runDiagnostics(){
   if(!msalAccount){alert("Sign in with Microsoft first.");return;}
