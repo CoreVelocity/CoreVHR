@@ -243,7 +243,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.43<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.44<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -956,9 +956,9 @@ function rSalary(){
   const pr=salaryMonth.split("-").map(Number); const yy=pr[0],mm=pr[1];
   const mStart=new Date(yy,mm-1,1), mEnd=new Date(yy,mm,0), dim=mEnd.getDate();
   let tSal=0,tOnb=0,tDue=0;
-  const rows=S.employees.filter(e=>{const s2=D(e.start);const en=e.endDate?D(e.endDate):null;return s2<=mEnd&&(!en||en>=mStart);}).map(e=>{
+  const rows=S.employees.filter(e=>{const s2=D(e.start);const en=(e.endDate||e.exitDate)?D(e.endDate||e.exitDate):null;return s2<=mEnd&&(!en||en>=mStart);}).map(e=>{
     const sal=totalSalary(e), perDay=sal/22, onb=(e.visaCost||0)+(e.insCost||0);
-    const s2=D(e.start), en=e.endDate?D(e.endDate):null;
+    const s2=D(e.start), en=(e.endDate||e.exitDate)?D(e.endDate||e.exitDate):null;
     const aS=s2>mStart?s2:mStart, aE=(en&&en<mEnd)?en:mEnd;
     const active=Math.max(0,daysBetween(aS,aE)+1);
     const full=(s2<=mStart)&&(!en||en>=mEnd);
@@ -989,7 +989,7 @@ function unpaidDaysInMonth(e,yy,mm){const mStart=new Date(yy,mm-1,1),mEnd=new Da
   return n;}
 function payslipData(e,m){const pr=m.split("-").map(Number),yy=pr[0],mm=pr[1];
   const mStart=new Date(yy,mm-1,1),mEnd=new Date(yy,mm,0),dim=mEnd.getDate();
-  const s2=D(e.start),en=e.endDate?D(e.endDate):null;
+  const s2=D(e.start),en=(e.endDate||e.exitDate)?D(e.endDate||e.exitDate):null;
   const full=(s2<=mStart)&&(!en||en>=mEnd);
   const aS=s2>mStart?s2:mStart,aE=(en&&en<mEnd)?en:mEnd;const active=Math.max(0,daysBetween(aS,aE)+1);
   const factor=full?1:(dim?active/dim:0);
