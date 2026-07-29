@@ -243,7 +243,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.42<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.43<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -1295,6 +1295,7 @@ function offForm(id){
      <div><label>Notice / letter date</label><input type="date" id="o_notice" value="${(o&&o.noticeDate)||''}"></div>
      <div><label>Last working day *</label><input type="date" id="o_last" value="${(o&&o.lastDay)||''}"></div>
      <div class="full"><label>Reason / notes</label><input id="o_reason" value="${(o&&o.reason)||''}" placeholder="e.g. resigned for relocation"></div>
+     <div class="full"><label>Termination reason(s) <span class="muted">(used in the official termination letter)</span></label><textarea id="o_termReason" rows="2" style="width:100%" placeholder="e.g. end of probation period; unsatisfactory performance; role redundancy">${(o&&o.termReason)||''}</textarea></div>
    </div><div class="hint">This creates a clearance checklist (visa, insurance, MOHRE, property return\u2026) and a final-settlement summary. Ahmed & the Office Manager are notified.</div>`,
    [["Cancel","closeModal()","g"],[id?"Save":"Start offboarding","saveOff('"+(id||'')+"')","p"]]);
 }
@@ -1304,7 +1305,7 @@ function saveOff(id){
   const prev=id?S.offboardings.find(x=>x.id===id):null;
   if(!id&&offFor(emp)){alert("An offboarding case already exists for this employee.");return;}
   const rec=Object.assign({id:id||uid(),emp,clr:{},status:"In progress"},prev||{},{
-    type:$("#o_type").value,noticeDate:$("#o_notice").value,lastDay,reason:$("#o_reason").value,emp,_ts:Date.now()});
+    type:$("#o_type").value,noticeDate:$("#o_notice").value,lastDay,reason:$("#o_reason").value,termReason:($("#o_termReason")?$("#o_termReason").value:""),emp,_ts:Date.now()});
   if(id){const i=S.offboardings.findIndex(x=>x.id===id);S.offboardings[i]=rec;}else S.offboardings.push(rec);
   // mark employee on notice
   const ei=S.employees.findIndex(x=>x.id===emp);if(ei>=0&&S.employees[ei].status!=="Exited"){S.employees[ei]={...S.employees[ei],status:"Notice",_ts:Date.now()};}
@@ -1350,13 +1351,56 @@ function offView(id){
    <label>Company property return</label><div style="margin:6px 0 14px">${assetRows}</div>
    <label>Clearance checklist</label><div style="margin-top:8px">${items}</div>
   `,
-  isHR()?[["Report / PDF",`offReport('${id}')`,"g"],["Mark complete",`completeOffboard('${id}')`,"p"],["Edit",`offForm('${id}')`,"g"],["Close","closeModal()","g"]]:[["Report / PDF",`offReport('${id}')`,"g"],["Close","closeModal()","p"]]);
+  isHR()?[["Report / PDF",`offReport('${id}')`,"g"]].concat(o.type==="Termination"?[["Termination letter",`offTerminationLetter('${id}')`,"g"]]:[]).concat([["Mark complete",`completeOffboard('${id}')`,"p"],["Edit",`offForm('${id}')`,"g"],["Close","closeModal()","g"]]):[["Report / PDF",`offReport('${id}')`,"g"]].concat(o.type==="Termination"?[["Termination letter",`offTerminationLetter('${id}')`,"g"]]:[]).concat([["Close","closeModal()","p"]]));
 }
 function returnAssetFrom(assetId,offId){const a=S.assets.find(x=>x.id===assetId);if(!a)return;a.status="Returned";a.returned=dateStr(today());a._ts=Date.now();
   const o=S.offboardings.find(x=>x.id===offId);if(o){const out=S.assets.filter(x=>x.emp===o.emp&&x.status!=="Returned");if(!out.length){o.clr=o.clr||{};o.clr.assets={done:true,date:dateStr(today()),by:currentUser};o._ts=Date.now();}}
   dbSet();offView(offId);}
 async function notifyOffboard(o){const e=S.employees.find(x=>x.id===o.emp)||{};await sendMail([APPROVER,"gladys@core-velocity.com"],"Offboarding started \u2014 "+(e.name||""),"An offboarding case has been opened in the CoreV | OxeFit portal.\n\nEmployee: "+(e.name||"")+"\nType: "+o.type+"\nLast working day: "+(o.lastDay?prettyD(o.lastDay):"")+"\nReason: "+(o.reason||"")+"\n\nPlease action visa cancellation, insurance removal, MOHRE cancellation and property return via the Offboarding tab.");flash("Offboarding started \u2014 Ahmed & Office Manager notified");}
 
+function offTerminationLetterHTML(id){
+  const o=S.offboardings.find(x=>x.id===id);if(!o)return '';const e=S.employees.find(x=>x.id===o.emp)||{};const c=S.settings,logo=c.logo;
+  const meta=[c.address,c.phone,c.tradeLicense?("Trade License "+c.tradeLicense):""].filter(Boolean).join("  \u00b7  ");
+  const idx=S.offboardings.filter(x=>x.type==="Termination").findIndex(x=>x.id===o.id);
+  const ref="CV-TERM-"+String((idx<0?1:idx+1)).padStart(4,'0');
+  const reason=((o.termReason||o.reason||'').trim())||'\u2014';
+  const sig=c.signatureImg?`<img src="${c.signatureImg}" style="height:82px;display:block">`:'';
+  const stamp=c.stampImg?`<img src="${c.stampImg}" style="height:132px;position:absolute;right:16px;margin-top:-30px;transform:rotate(-8deg);opacity:.9">`:`<span style="position:absolute;right:14px;margin-top:-24px;transform:rotate(-8deg);display:inline-block">${defaultStampSVG({issued:o.lastDay||dateStr(today())})}</span>`;
+  const P=t=>`<p style="margin:0 0 12px">${t}</p>`;
+  return `<div style="max-width:720px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;background:#fff">
+    <div style="padding:18px 26px 12px;border-bottom:2px solid #1b9aaa">
+      ${logo?`<img src="${logo}" style="max-height:56px;max-width:240px;object-fit:contain">`:`<div style="font-size:20px;font-weight:700;color:#0E1A40">${c.companyName||'CoreV | OxeFit'}</div>`}
+      <div style="font-size:11px;color:#777;margin-top:6px">${meta}</div>
+    </div>
+    <div style="padding:22px 26px;font-size:13.5px;line-height:1.65">
+      <div style="margin-bottom:14px">Ref: ${ref}<br>Date: ${prettyD(dateStr(today()))}</div>
+      <div style="margin-bottom:14px">To: <b>${e.name||''}</b>${e.designation?('<br>'+e.designation):''}${e.empId?('<br>Employee ID: '+e.empId):''}</div>
+      <div style="font-weight:700;margin-bottom:14px">Subject: Notice of Termination of Employment</div>
+      ${P(`Dear ${e.name||''},`)}
+      ${P(`We write to formally notify you that <b>${c.companyName}</b> has decided to terminate your employment as ${e.designation||'\u2014'}, effective <b>${o.lastDay?prettyD(o.lastDay):'[last working day]'}</b>.`)}
+      ${o.noticeDate?P(`This decision follows the notice issued on ${prettyD(o.noticeDate)}.`):''}
+      ${P(`<b>Reason(s) for termination:</b> ${reason.replace(/</g,'&lt;').replace(/\n/g,'<br>')}`)}
+      ${P(`In accordance with UAE Labour Law, your end-of-service entitlements \u2014 gratuity, payment for any accrued leave balance, and your salary up to the last working day \u2014 will be calculated and settled. You are kindly requested to complete the clearance process, hand over all pending work, and return all company property on or before your last working day.`)}
+      ${P(`We thank you for your service with ${c.companyName} and wish you success in your future endeavours.`)}
+      ${P(`For and on behalf of ${c.companyName}`)}
+      <div style="position:relative;min-height:96px;margin-top:6px">${sig}${stamp}</div>
+      <div>_______________________<br><b>${c.signatory||'[Authorised signatory]'}</b><br>${c.signatoryTitle||''}<br>Trade License No: ${c.tradeLicense||'\u2014'}</div>
+    </div>
+    <div style="text-align:center;padding:12px;border-top:2px solid #1b9aaa;font-size:10.5px;color:#777"><b style="color:#0E1A40">${c.companyName||'CoreV | OxeFit'}</b>${c.website?'  \u00b7  '+c.website:''}<div style="margin-top:3px">Official letter issued from the CoreV | OxeFit HR portal.</div></div>
+  </div>`;
+}
+function offTerminationLetter(id){
+  const o=S.offboardings.find(x=>x.id===id);if(!o)return;const e=S.employees.find(x=>x.id===o.emp)||{};
+  const canEmail=isHR()&&e.email;
+  modal("Termination letter \u2014 "+(e.name||''),`<div id="printArea">${offTerminationLetterHTML(id)}</div>`,
+    [["Print / PDF","window.print()","g"]].concat(canEmail?[["Email to employee","emailTerminationLetter('"+id+"')","g"]]:[]).concat([["Close","closeModal()","p"]]));
+}
+async function emailTerminationLetter(id){
+  const o=S.offboardings.find(x=>x.id===id);if(!o)return;const e=S.employees.find(x=>x.id===o.emp)||{};
+  if(!e.email){flash("No employee email on file");return;}
+  const ok=await sendMailHtml(e.email,"Notice of Termination of Employment \u2014 "+(S.settings.companyName||"CoreV | OxeFit"),offTerminationLetterHTML(id));
+  flash(ok?("Termination letter emailed to "+e.name):"Email not sent (sign in / check Mail.Send)");
+}
 function offReportHTML(id){
   const o=S.offboardings.find(x=>x.id===id);if(!o)return '';const e=S.employees.find(x=>x.id===o.emp)||{};
   const set=offSettlement(e,o.lastDay),pr=offProgress(o),c=S.settings,logo=c.logo;
