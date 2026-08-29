@@ -1,3 +1,4 @@
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CoreV | OxeFit Portal</title>
@@ -243,7 +244,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.45<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · v3.47<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -359,10 +360,15 @@ async function notifyLeaveDecision(l){
   flash(ok?("Employee notified: "+l.status):"Decision saved (email not sent)");
 }
 function annualTakenInYear(emp,yr){return S.leaves.filter(l=>l.emp===emp.id&&l.status==="Approved"&&D(l.start).getFullYear()===yr&&(l.type==="Annual"||(l.type==="Emergency"&&l.paid))).reduce((s,l)=>s+workdaysIncl(l.start,l.end),0);}
+function inLeaveProbation(e,asOf){const hire=D(e&&e.start);if(!hire)return false;const sixM=new Date(hire);sixM.setMonth(sixM.getMonth()+6);return (asOf||today())<sixM;}
 function accruedInYear(emp,yr){
   const hire=D(emp.start); const jan1=new Date(yr,0,1); const dec31=new Date(yr,11,31);
   const start=hire>jan1?hire:jan1; const end=(yr===today().getFullYear())?today():dec31;
   if(end<start) return 0;
+  // Annual leave only becomes payable once the 6-month probation is completed
+  // (contract cl. 10.3 / UAE Art. 29). No accrual before the 6-month service mark.
+  const sixM=new Date(hire); sixM.setMonth(sixM.getMonth()+6);
+  if(end<sixM) return 0;
   // Once an employee has completed 1 full year of service (as of today for the current
   // year), the full 23-day entitlement is available from the first month —
   // no monthly proration. Only first-year employees accrue month-by-month.
@@ -865,7 +871,7 @@ function rEos(){
       <td><div class="emp-name">${e.name}</div><div class="emp-sub">${fmt1(yearsOfService(e))} yrs ${e.misconduct?'· <span style="color:var(--red)">misconduct</span>':''}</div></td>
       <td class="mono">${aed(e.basic)}</td><td>${fmt1(yearsOfService(e))} yrs</td>
       <td class="mono" style="color:var(--teal)">${aed(g)}</td>
-      <td class="mono">${aed(lv)}</td>
+      <td class="mono">${aed(lv)}${(annualBalance(e).balance<0.05&&inLeaveProbation(e))?`<div class="emp-sub" style="color:var(--muted)">within 6-mo probation</div>`:""}</td>
       <td class="right mono"><b>${aed(g+lv)}</b></td></tr>`}).join("")||''}
    </tbody></table></div>
    <div class="hint" style="margin-top:10px">Leave payout = current annual-leave balance × daily basic wage. Final settlement should also net off any outstanding company dues and unreturned assets.</div>`;
@@ -1344,6 +1350,7 @@ function offView(id){
      <label>Final settlement estimate</label>
      <div class="flex" style="justify-content:space-between;margin-top:6px"><span class="muted">Gratuity (${fmt1(yearsOfService(e))} yrs${e.misconduct?' · forfeited (misconduct)':''})</span><b class="mono">AED ${aed(set.g)}</b></div>
      <div class="flex" style="justify-content:space-between"><span class="muted">Leave payout (${fmt1(set.lvDays)} working days \u00d7 basic/22)</span><b class="mono">AED ${aed(set.lvPay)}</b></div>
+     ${(set.lvDays<0.05&&inLeaveProbation(e,o.lastDay?D(o.lastDay):today()))?`<div class="hint" style="margin:-2px 0 4px">No annual leave accrued \u2014 within 6-month probation (contract cl. 10.3).</div>`:""}
      <div class="flex" style="justify-content:space-between"><span class="muted">Final salary (${set.finDays}/${set.finTotal} days of ${o.lastDay?prettyD(o.lastDay):'exit month'})</span><b class="mono">AED ${aed(set.finalSal)}</b></div>
      <div class="flex" style="justify-content:space-between;border-top:1px solid var(--line);margin-top:6px;padding-top:6px"><b>Estimated total</b><b class="mono" style="color:var(--teal)">AED ${aed(set.total)}</b></div>
      <div class="hint">Indicative only \u2014 confirm against MOHRE rules, notice adjustments and any deductions. Full breakdown in End of Service.</div>
@@ -1430,6 +1437,7 @@ function offReportHTML(id){
       <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
         ${money("Gratuity ("+fmt1(yearsOfService(e))+" yrs"+(e.misconduct?' \u00b7 forfeited':'')+")",set.g)}
         ${money("Leave payout ("+fmt1(set.lvDays)+" working days \u00d7 basic/22)",set.lvPay)}
+        ${(set.lvDays<0.05&&inLeaveProbation(e,o.lastDay?D(o.lastDay):today()))?`<tr><td colspan="2" style="padding:2px 8px 6px;color:#888;font-size:11px">No annual leave accrued \u2014 within 6-month probation (contract cl. 10.3).</td></tr>`:""}
         ${money("Final salary ("+set.finDays+"/"+set.finTotal+" days of "+(o.lastDay?prettyD(o.lastDay):'exit month')+")",set.finalSal)}
         <tr><td style="padding:7px 8px;font-weight:700;border-top:2px solid #1b9aaa">Estimated total</td><td style="padding:7px 8px;text-align:right;font-family:monospace;font-weight:700;border-top:2px solid #1b9aaa;color:#1b9aaa">${aed(set.total)}</td></tr>
       </table>
