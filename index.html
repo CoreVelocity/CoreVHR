@@ -184,6 +184,7 @@ tbody tr:hover{background:#FCFBF7}
     </button>
     <div class="login-hint">Use your <b>@core-velocity.com</b> work account</div>
     <div class="login-hint" id="redirHint" style="margin-top:6px;font-size:11px;color:var(--ink-soft);word-break:break-all"></div>
+    <div class="login-hint" id="loginVer" style="margin-top:10px;font-weight:700;color:var(--teal)"></div>
     <div class="login-error" id="loginError"></div>
     <div class="login-setup" id="loginSetup"></div>
   </div>
@@ -243,7 +244,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · v3.47<br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · <span id="footVer">v3.48</span><br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -251,6 +252,7 @@ tbody tr:hover{background:#FCFBF7}
       <div><h1 id="vTitle">Dashboard</h1><p id="vSub"></p></div>
       <div class="rolebox">
         <div class="syncbar offline" id="syncBar" onclick="manualSync()" title="Click to sync now"><span class="dot"></span><span id="syncText">Connecting…</span></div>
+        <span id="appVer" class="muted" style="font-size:11px;margin-right:8px"></span>
         <span id="whoami" class="muted"></span>
         <button class="btn g sm" onclick="signOut()">Sign out</button>
       </div>
@@ -2010,6 +2012,7 @@ function seedDemo(force){
 }
 
 /* ---------- logo helpers ---------- */
+const APP_VERSION="v3.48";
 function applyLogo(){const l=(S.settings&&S.settings.logo)||DEFAULT_LOGO;const bl=$("#brandLogo"),ll=$("#loginLogo");
   if(bl){bl.src=l;bl.style.display="block";}
   if(ll){ll.src=l;ll.style.display="block";}
@@ -2215,6 +2218,7 @@ async function boot(){
   if(!S.settings||!S.settings.companyName)S.settings={companyName:"CoreV | OxeFit",tradeLicense:"",address:"Dubai, United Arab Emirates",phone:"",signatory:"",signatoryTitle:"HR Manager",website:"",insurance:{company:"",policyNo:"",refId:"",benefits:"",docs:[]},carryCap:23,dailyHours:8,toilMult:3,weekdayMult:2,ticketCycle:12,logo:""};
   applyLogo();
   try{const rh=document.getElementById("redirHint");if(rh)rh.textContent="Sign-in redirect URI (register in Azure): "+ONEDRIVE_CONFIG.redirectUri;}catch(_){}
+  try{const lv=document.getElementById("loginVer");if(lv)lv.textContent="Version "+APP_VERSION;const av=document.getElementById("appVer");if(av)av.textContent=APP_VERSION;const fv=document.getElementById("footVer");if(fv)fv.textContent=APP_VERSION;}catch(_){}
   document.querySelectorAll(".nav").forEach(n=>n.addEventListener("click",()=>{setView(n.dataset.v);if(n.dataset.v==="leave")setTimeout(remindCerts,150);}));
   document.querySelectorAll(".navhead").forEach(h=>h.addEventListener("click",()=>h.parentNode.classList.toggle("open")));
   if(!ONEDRIVE_CONFIG.clientId){const su=$("#loginSetup");if(su){su.style.display="block";su.innerHTML="<b>Setup:</b> set <code>ONEDRIVE_CONFIG.clientId</code> (your Azure app) to enable Microsoft sign-in and OneDrive sync.";}}
