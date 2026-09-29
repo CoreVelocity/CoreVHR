@@ -244,7 +244,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · <span id="footVer">v3.49</span><br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · <span id="footVer">v3.50</span><br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -959,6 +959,46 @@ function flash(msg){const d=document.createElement("div");d.textContent=msg;d.st
 
 /* ---------- Monthly salaries (admin) ---------- */
 let salaryMonth="";
+function payrollReportHTML(month){
+  const c=S.settings,logo=c.logo;
+  const pr=month.split("-").map(Number),yy=pr[0],mm=pr[1];
+  const mStart=new Date(yy,mm-1,1),mEnd=new Date(yy,mm,0),dim=mEnd.getDate();
+  const mLabel=new Date(yy,mm-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  let tSal=0,tOnb=0,tDue=0;
+  const rows=S.employees.filter(e=>{const s2=D(e.start);const en=(e.endDate||e.exitDate)?D(e.endDate||e.exitDate):null;return s2<=mEnd&&(!en||en>=mStart);}).map(e=>{
+    const sal=totalSalary(e),onb=(e.visaCost||0)+(e.insCost||0);
+    const s2=D(e.start),en=(e.endDate||e.exitDate)?D(e.endDate||e.exitDate):null;
+    const aS=s2>mStart?s2:mStart,aE=(en&&en<mEnd)?en:mEnd;
+    const active=Math.max(0,daysBetween(aS,aE)+1);
+    const full=(s2<=mStart)&&(!en||en>=mEnd),joined=s2>=mStart&&s2<=mEnd;
+    let due=full?sal:sal*(active/dim); if(joined)due+=onb;
+    tSal+=sal;tOnb+=onb;tDue+=due; return {e,sal,onb,due,joined,full};
+  });
+  const conf=isMonthConfirmed(month),prun=payrunFor(month);
+  const meta=[c.address,c.phone,c.tradeLicense?("Trade License "+c.tradeLicense):""].filter(Boolean).join("  \u00b7  ");
+  const th='style="text-align:left;padding:7px 8px;border-bottom:2px solid #1b9aaa;font-size:11px;color:#0E1A40;text-transform:uppercase;letter-spacing:.4px"';
+  const thr='style="text-align:right;padding:7px 8px;border-bottom:2px solid #1b9aaa;font-size:11px;color:#0E1A40;text-transform:uppercase;letter-spacing:.4px"';
+  const td='style="padding:6px 8px;border-bottom:1px solid #eee"';
+  const tdr='style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;font-family:monospace"';
+  const body=rows.length?rows.map(r=>`<tr><td ${td}>${r.e.empId||''}</td><td ${td}><b>${r.e.name}</b></td><td ${td}>${r.e.designation||'\u2014'}</td><td ${tdr}>${aed(r.sal)}</td><td ${tdr}>${r.onb?aed(r.onb):'\u2014'}</td><td ${tdr}><b>${aed(r.due)}</b>${r.joined?' (joined)':(!r.full?' (part)':'')}</td></tr>`).join(""):`<tr><td colspan="6" style="padding:12px;color:#888;text-align:center">No employees were active in ${mLabel}.</td></tr>`;
+  return `<div style="max-width:760px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;background:#fff">
+    <div style="padding:18px 24px 12px;border-bottom:2px solid #1b9aaa">
+      ${logo?`<img src="${logo}" style="max-height:54px;max-width:230px;object-fit:contain">`:`<div style="font-size:20px;font-weight:700;color:#0E1A40">${c.companyName||'CoreV | OxeFit'}</div>`}
+      <div style="font-size:11px;color:#777;margin-top:6px">${meta}</div>
+    </div>
+    <div style="padding:18px 24px">
+      <h2 style="margin:0 0 4px;color:#0E1A40">Monthly Payroll Report</h2>
+      <div style="color:#777;font-size:12px;margin-bottom:14px">${mLabel} \u00b7 ${rows.length} employee(s) \u00b7 <b style="color:${conf?'#127d6e':'#b45309'}">${conf?'Confirmed':'Draft'}</b>${conf&&prun&&prun.on?(' on '+prettyD(prun.on)):''} \u00b7 generated ${prettyD(_ymd(today()))}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr><th ${th}>ID</th><th ${th}>Employee</th><th ${th}>Role</th><th ${thr}>Monthly salary</th><th ${thr}>Onboarding</th><th ${thr}>Due this month</th></tr></thead>
+        <tbody>${body}</tbody>
+        <tfoot><tr style="font-weight:700"><td colspan="3" style="padding:8px;border-top:2px solid #1b9aaa">Total</td><td style="padding:8px;text-align:right;font-family:monospace;border-top:2px solid #1b9aaa">${aed(tSal)}</td><td style="padding:8px;text-align:right;font-family:monospace;border-top:2px solid #1b9aaa">${aed(tOnb)}</td><td style="padding:8px;text-align:right;font-family:monospace;border-top:2px solid #1b9aaa;color:#1b9aaa">${aed(tDue)}</td></tr></tfoot>
+      </table>
+      <div style="margin-top:14px;color:#777;font-size:11px;border-top:1px solid #eee;padding-top:10px">Due = full monthly salary for a complete month, pro-rated by calendar days for joiners/leavers; onboarding (visa + insurance) is added in the joining month. Indicative \u2014 confirm against confirmed payroll and any unpaid-leave deductions. ${c.companyName||'CoreV | OxeFit'}${c.website?' \u00b7 '+c.website:''}</div>
+    </div>
+  </div>`;
+}
+function payrollReport(month){modal("Monthly payroll report \u2014 "+month,`<div id="printArea">${payrollReportHTML(month)}</div>`,[["Print / PDF","window.print()","g"],["Close","closeModal()","p"]]);}
 function rSalary(){
   if(!isAdmin()){view.innerHTML=`<div class="empty"><b>Restricted</b>Monthly salaries are admin-only.</div>`;return;}
   const now=today(); if(!salaryMonth) salaryMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
@@ -977,7 +1017,7 @@ function rSalary(){
     return {e,sal,perDay,onb,due,joined,full};
   });
   const conf=isMonthConfirmed(salaryMonth); const prun=payrunFor(salaryMonth);
-  view.innerHTML=`<div class="sec-h"><h2>Monthly salaries <span class="badge ${conf?'b-green':'b-amber'}" style="vertical-align:middle">${conf?'Confirmed':'Draft'}</span></h2><div class="flex" style="gap:8px;align-items:center"><input type="month" value="${salaryMonth}" onchange="salaryMonth=this.value;setView('salary')" style="max-width:165px">${conf?`<button class="btn g" onclick="emailAllPayslips('${salaryMonth}')">Email all payslips</button><button class="btn g" onclick="unconfirmPayroll('${salaryMonth}')">Reopen</button>`:`<button class="btn p" onclick="confirmPayroll('${salaryMonth}')">Confirm payroll</button>`}</div></div>
+  view.innerHTML=`<div class="sec-h"><h2>Monthly salaries <span class="badge ${conf?'b-green':'b-amber'}" style="vertical-align:middle">${conf?'Confirmed':'Draft'}</span></h2><div class="flex" style="gap:8px;align-items:center"><input type="month" value="${salaryMonth}" onchange="salaryMonth=this.value;setView('salary')" style="max-width:165px"><button class="btn g" onclick="payrollReport('${salaryMonth}')">Report / PDF</button>${conf?`<button class="btn g" onclick="emailAllPayslips('${salaryMonth}')">Email all payslips</button><button class="btn g" onclick="unconfirmPayroll('${salaryMonth}')">Reopen</button>`:`<button class="btn p" onclick="confirmPayroll('${salaryMonth}')">Confirm payroll</button>`}</div></div>
    <div class="card" style="background:${conf?'var(--green-wash);border-color:#Bfe0CC':'var(--amber-wash);border-color:#EBD9A8'};margin-bottom:8px">${conf?`Payroll confirmed${prun&&prun.by?(' by '+prun.by):''}${prun&&prun.on?(' on '+prettyD(prun.on)):''} \u2014 payslips can now be emailed to employees.`:`Draft \u2014 review the figures below, then <b>Confirm payroll</b> (admin) to generate & email payslips.`}</div>
    <div class="tablewrap" style="overflow-x:auto">${rows.length?`<table><thead><tr><th>ID</th><th>Employee</th><th>Role</th><th>Start</th><th class="right">Monthly salary</th><th class="right">Onboarding</th><th class="right">Per day \u00f722</th><th class="right">Due this month</th><th class="right">Payslip</th></tr></thead><tbody>
    ${rows.map(r=>`<tr><td class="mono">${r.e.empId||''}</td><td class="emp-name">${r.e.name}</td><td>${r.e.designation||'\u2014'}</td><td class="mono">${prettyD(r.e.start)}</td><td class="right mono">${aed(r.sal)}</td><td class="right mono">${r.onb?aed(r.onb):'\u2014'}</td><td class="right mono">${aed(r.perDay)}</td><td class="right mono"><b>${aed(r.due)}</b>${r.joined?' <span class="badge b-amber">joined</span>':(!r.full?' <span class="badge b-grey">part</span>':'')}</td><td class="right"><button class="btn g sm" onclick="payslipView('${r.e.id}','${salaryMonth}')">View</button></td></tr>`).join("")}
@@ -2014,7 +2054,7 @@ function seedDemo(force){
 }
 
 /* ---------- logo helpers ---------- */
-const APP_VERSION="v3.49";
+const APP_VERSION="v3.50";
 function applyLogo(){const l=(S.settings&&S.settings.logo)||DEFAULT_LOGO;const bl=$("#brandLogo"),ll=$("#loginLogo");
   if(bl){bl.src=l;bl.style.display="block";}
   if(ll){ll.src=l;ll.style.display="block";}
