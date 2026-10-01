@@ -112,7 +112,7 @@ tbody tr:hover{background:#FCFBF7}
 .stamp-img svg{width:148px;height:148px;display:block}
 .row-act{display:flex;gap:6px;justify-content:flex-end}
 .tag{font-size:11px;color:var(--ink-soft);background:#EFEBE2;padding:2px 7px;border-radius:5px}
-@media print{ .side,.top,.sec-h,.scrim .foot{display:none!important} body *{visibility:hidden} #printArea,#printArea *{visibility:visible} #printArea{position:absolute;left:0;top:0;width:100%;padding:0;border:none;box-shadow:none} }
+@media print{ @page{margin:14mm} html,body{background:#fff!important} #app{display:none!important} #scrim{display:block!important;position:static!important;background:none!important;padding:0!important;overflow:visible!important} #scrim .modal{position:static!important;max-width:none!important;width:100%!important;max-height:none!important;margin:0!important;border:none!important;border-radius:0!important;box-shadow:none!important;animation:none!important} #scrim .modal>h3{display:none!important} #scrim .modal .foot{display:none!important} #scrim .modal .body{padding:0!important;max-height:none!important;overflow:visible!important} #printArea{position:static!important;width:100%!important;padding:0!important;border:none!important;box-shadow:none!important} }
 </style>
 
 <style>
@@ -244,7 +244,7 @@ tbody tr:hover{background:#FCFBF7}
 
     <div class="nav navtop" data-v="settings">⚙ Settings</div>
     <div class="nav" data-v="features">★ Key Features</div>
-    <div class="side-foot">CoreV | OxeFit · <span id="footVer">v3.50</span><br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
+    <div class="side-foot">CoreV | OxeFit · <span id="footVer">v3.51</span><br>Mainland · MOHRE rules<br>Annual leave resets 1 Jan</div>
   </aside>
 
   <main class="main">
@@ -1085,9 +1085,11 @@ async function emailPayslip(empId,m){if(!isMonthConfirmed(m)){alert("Confirm the
   flash(ok?("Payslip emailed to "+e.name):"Could not send (sign in / check email)");}
 function emailAllPayslips(m){if(!isMonthConfirmed(m)){alert("Confirm the payroll run first.");return;}
   const yy=+m.split('-')[0],mm=+m.split('-')[1];const mEnd=new Date(yy,mm,0),mStart=new Date(yy,mm-1,1);
-  const list=S.employees.filter(e=>e.email&&D(e.start)<=mEnd&&(!e.endDate||D(e.endDate)>=mStart));
-  if(!list.length){alert("No employees with a work email for this month.");return;}
-  if(!confirm("Email payslips for "+m+" to "+list.length+" employee(s)?"))return;
+  const all=S.employees.filter(e=>e.email&&D(e.start)<=mEnd&&(!e.endDate||D(e.endDate)>=mStart));
+  const list=all.filter(e=>!(e.status==="Exited"||e.status==="Notice")&&!S.offboardings.some(o=>o.emp===e.id));
+  const skipped=all.length-list.length;
+  if(!list.length){alert("No eligible employees with a work email for this month (offboarding / exited staff are skipped).");return;}
+  if(!confirm("Email payslips for "+m+" to "+list.length+" employee(s)?"+(skipped?(" "+skipped+" offboarding / exited employee(s) will be skipped."):"")))return;
   (async()=>{let n=0;for(const e of list){const ok=await sendMailHtml(e.email,"Your payslip \u2014 "+MONTHN[mm-1]+" "+yy,payslipInline(e,m));if(ok)n++;}flash("Payslips emailed: "+n+"/"+list.length);})();}
 
 /* ---------- Documents (admin & full) ---------- */
@@ -2054,7 +2056,7 @@ function seedDemo(force){
 }
 
 /* ---------- logo helpers ---------- */
-const APP_VERSION="v3.50";
+const APP_VERSION="v3.51";
 function applyLogo(){const l=(S.settings&&S.settings.logo)||DEFAULT_LOGO;const bl=$("#brandLogo"),ll=$("#loginLogo");
   if(bl){bl.src=l;bl.style.display="block";}
   if(ll){ll.src=l;ll.style.display="block";}
